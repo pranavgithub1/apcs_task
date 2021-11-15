@@ -67,40 +67,41 @@ function generateMask(pieceX,pieceY) {
   return pieceMask;
 }
 
-function generatePieceTemplate(topLeftX,topLeftY,width,height=width,topOrientation,rightOrientation,botOrientation,leftOrientation){
+function generatePieceTemplate(topLeftX,topLeftY,width,height=width,topOrientation=1,rightOrientation=-1,botOrientation=-1,leftOrientation=1){
   let topLeft = [topLeftX,topLeftY];
   let topRight = [topLeftX+width,topLeftY];
   let botRight = [topLeftX+width,topLeftY+height];
   let botLeft = [topLeftX,topLeftY+height];
-
+  let tabHeight = 15;
+  let tabInset = 40;
+  let r = 1;
+  let topBridgeStart = [topLeft[0]+(tabInset),topLeft[1]+(tabHeight*topOrientation)];
+  let topBridgeEnd = [topRight[0]-(tabInset),topRight[1]+(tabHeight*topOrientation)];
+  let rightBridgeStart = [topRight[0]+(tabHeight*rightOrientation),topRight[1]+tabInset];
+  let rightBridgeEnd = [botRight[0]+(tabHeight*rightOrientation),botRight[1]-tabInset];
+  let botBridgeStart = [botRight[0]-tabInset,botRight[1]+(tabHeight*botOrientation)];
+  let botBridgeEnd = [botLeft[0]+tabInset,botLeft[1]+(tabHeight*botOrientation)];
+  let leftBridgeStart = [botLeft[0]+(tabHeight*leftOrientation),botLeft[1]-tabInset];
+  let leftBridgeEnd = [topLeft[0]+(tabHeight*leftOrientation),topLeft[1]+tabInset];
   let masterTemplate = [
-    [topLeft[0]+20,topLeft[1],topLeft[0]+60,topLeft[1],topLeft[0]+35,topLeft[1]+25],
-    [(topLeft[0]+35)-10,(topLeft[1]+25)+10,(topRight[0]-35)+10,(topLeft[1]+25)+10,topRight[0]-35,topLeft[1]+25],
+    [topLeft[0]+20,topLeft[1],topLeft[0]+60,topLeft[1],...topBridgeStart],
+    [...getLine(topLeft[0]+60,topLeft[1],...topBridgeStart,r),...getLine(topRight[0]-60,topRight[1],...topBridgeEnd,r),...topBridgeEnd],
     [topRight[0]-60,topRight[1],topRight[0]-20,topRight[1],topRight[0],topRight[1]],
 
-    [topRight[0],topRight[1]+20,topRight[0],topRight[1]+60,topRight[0]-25,topRight[1]+35],
-    [(topRight[0]-25)-10,(topRight[1]+35)-10,(botRight[0]-25)-10,(botRight[1]-35)+10,botRight[0]-25,botRight[1]-35],
+    [topRight[0],topRight[1]+20,topRight[0],topRight[1]+60,...rightBridgeStart],
+    [...getLine(topRight[0],topRight[1]+60,...rightBridgeStart,r),...getLine(botRight[0],botRight[1]-60,...rightBridgeEnd,r) ,...rightBridgeEnd],
     [botRight[0],botRight[1]-60,botRight[0],botRight[1]-20,botRight[0],botRight[1]],
 
-    [botRight[0]-20,botRight[1],botRight[0]-60,botRight[1],botRight[0]-35,botRight[1]-25],
-    [(botRight[0]-35)+10,(botRight[1]-25)-10,(botLeft[0]+35)-10,(botLeft[1]-25)-10,botLeft[0]+35,botLeft[1]-25],
+    [botRight[0]-20,botRight[1],botRight[0]-60,botRight[1],...botBridgeStart],
+    [...getLine(botRight[0]-60,botRight[1],...botBridgeStart,r),...getLine(botLeft[0]+60,botLeft[1],...botBridgeEnd,r),...botBridgeEnd],
     [botLeft[0]+60,botLeft[1],botLeft[0]+20,botLeft[1],botLeft[0],botLeft[1]],
 
-    [botLeft[0],botLeft[1]-20,botLeft[0],botLeft[1]-60,botLeft[0]+25,botLeft[1]-35],
-    [(botLeft[0]+25)+10,(botLeft[1]-35)+10,(topLeft[0]+25)+10,(topLeft[1]+35)-10,topLeft[0]+25,topLeft[1]+35],
+    [botLeft[0],botLeft[1]-20,botLeft[0],botLeft[1]-60,...leftBridgeStart],
+    [...getLine(botLeft[0],botLeft[1]-60,...leftBridgeStart,r),...getLine(topLeft[0],topLeft[1]+60,...leftBridgeEnd,r),...leftBridgeEnd],
     [topLeft[0],topLeft[1]+60,topLeft[0],topLeft[1]+20,topLeft[0],topLeft[1]]
   ];
   return masterTemplate;
 }
-
-function reflectxy(template){
-  let swappedTemplate = template;
-  for(let arr of template){
-    for(let i = 0;i<=arr.length-2;i+=2){
-      let temp = arr[i+1];
-      arr[i+1] = arr[i];
-      arr[i] = temp;
-    }
-  }
-  return swappedTemplate;
+function getLine(x1,y1,x2,y2,r){
+  return [x2 + (x2-x1)/r,y2 + (y2-y1)/r];
 }
