@@ -56,6 +56,100 @@ function generateMask(pieceX,pieceY) {
   };
   let pieceMask = createGraphics(img.width,img.height);
   pieceMask.fill('rgba(0, 0, 0, 1)');
-  pieceMask.square(0,0,100);
+  let template = generatePieceTemplate(0,0,100);
+  pieceMask.beginShape();
+  pieceMask.vertex(0,0);
+  for(arr of template){
+    pieceMask.bezierVertex(...arr);
+  }
+  pieceMask.endShape();
+
   return pieceMask;
 }
+
+function generatePieceTemplate(topLeftX,topLeftY,width,height=width){
+  let topLeft = [topLeftX,topLeftY];
+  let topRight = [topLeftX+width,topLeftY];
+  let botRight = [topLeftX+width,topLeftY+height];
+  let botLeft = [topLeftX,topLeftY+height];
+
+  let masterTemplate = [
+    [topLeft[0]+20,topLeft[1],topLeft[0]+60,topLeft[1],topLeft[0]+35,topLeft[1]+25],
+    [(topLeft[0]+35)-10,(topLeft[1]+25)+10,(topRight[0]-35)+10,(topLeft[1]+25)+10,topRight[0]-35,topLeft[1]+25],
+    [topRight[0]-60,topRight[1],topRight[0]-20,topRight[1],topRight[0],topRight[1]],
+
+    [topRight[0],topRight[1]+20,topRight[0],topRight[1]+60,topRight[0]-25,topRight[1]+35],
+    [(topRight[0]-25)-10,(topRight[1]+35)-10,(botRight[0]-25)-10,(botRight[1]-35)+10,botRight[0]-25,botRight[1]-35],
+    [botRight[0],botRight[1]-60,botRight[0],botRight[1]-20,botRight[0],botRight[1]],
+
+    [botRight[0]-20,botRight[1],botRight[0]-60,botRight[1],botRight[0]-35,botRight[1]-25],
+    [(botRight[0]-35)+10,(botRight[1]-25)-10,(botLeft[0]+35)-10,(botLeft[1]-25)-10,botLeft[0]+35,botLeft[1]-25],
+    [botLeft[0]+60,botLeft[1],botLeft[0]+20,botLeft[1],botLeft[0],botLeft[1]],
+
+    [botLeft[0],botLeft[1]-20,botLeft[0],botLeft[1]-60,botLeft[0]+25,botLeft[1]-35],
+    [(botLeft[0]+25)+10,(botLeft[1]-35)+10,(topLeft[0]+25)+10,(topLeft[1]+35)-10,topLeft[0]+25,topLeft[1]+35],
+    [topLeft[0],topLeft[1]+60,topLeft[0],topLeft[1]+20,topLeft[0],topLeft[1]]
+  ];
+  return masterTemplate;
+}
+
+function reflectxy(template){
+  let swappedTemplate = template;
+  for(let arr of template){
+    for(let i = 0;i<=arr.length-2;i+=2){
+      let temp = arr[i+1];
+      arr[i+1] = arr[i];
+      arr[i] = temp;
+    }
+  }
+  return swappedTemplate;
+}
+
+  // pieceMask.beginShape();
+  // pieceMask.curveVertex(100,0);
+
+  // pieceMask.curveVertex(100,0); 
+  // pieceMask.curveVertex(100,35);
+  // pieceMask.curveVertex(75,35); 
+  // pieceMask.curveVertex(75,65);
+  // pieceMask.vertex(100,65);
+  // // pieceMask.curveVertex(100,100);
+
+  // // pieceMask.curveVertex(100,100);
+  // //
+  // pieceMask.vertex(100,100);
+  // // pieceMask.curveVertex(100,100);
+
+  // // pieceMask.curveVertex(100,100);
+  // pieceMask.vertex(65,100);
+  // pieceMask.curveVertex(65,75);
+  // pieceMask.curveVertex(35,75);
+  // pieceMask.curveVertex(35,100);
+  // pieceMask.curveVertex(0,100);
+
+  // pieceMask.curveVertex(0,100);
+  
+  // pieceMask.endShape();
+
+
+  // let topLeft = [0,0];
+  // let topRight = [100,0];
+  // let botRight = [100,100];
+  // let botLeft = [0,100]
+  // let masterTemplate = [
+  //   [topLeft[0]+20,topLeft[1],topLeft[0]+60,topLeft[1],topLeft[0]+35,topLeft[1]+25],
+  //   [(topLeft[0]+35)-10,(topLeft[1]+25)+10,(topRight[0]-35)+10,(topLeft[1]+25)+10,topRight[0]-35,topLeft[1]+25],
+  //   [topRight[0]-60,topRight[1],topRight[0]-20,topRight[1],topRight[0],topRight[1]],
+
+  //   [topRight[0],topRight[1]+20,topRight[0],topRight[1]+60,topRight[0]-25,topRight[1]+35],
+  //   [(topRight[0]-25)-10,(topRight[1]+35)-10,(botRight[0]-25)-10,(botRight[1]-35)+10,botRight[0]-25,botRight[1]-35],
+  //   [botRight[0],botRight[1]-60,botRight[0],botRight[1]-20,botRight[0],botRight[1]],
+
+  //   [botRight[0]-20,botRight[1],botRight[0]-60,botRight[1],botRight[0]-35,botRight[1]-25],
+  //   [(botRight[0]-35)+10,(botRight[1]-25)-10,(botLeft[0]+35)-10,(botLeft[1]-25)-10,botLeft[0]+35,botLeft[1]-25],
+  //   [botLeft[0]+60,botLeft[1],botLeft[0]+20,botLeft[1],botLeft[0],botLeft[1]],
+
+  //   [botLeft[0],botLeft[1]-20,botLeft[0],botLeft[1]-60,botLeft[0]+25,botLeft[1]-35],
+  //   [(botLeft[0]+25)+10,(botLeft[1]-35)+10,(topLeft[0]+25)+10,(topLeft[1]+35)-10,topLeft[0]+25,topLeft[1]+35],
+  //   [topLeft[0],topLeft[1]+60,topLeft[0],topLeft[1]+20,topLeft[0],topLeft[1]]
+  // ]
