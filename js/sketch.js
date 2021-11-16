@@ -3,7 +3,7 @@ let endpoint = "https://api.artic.edu/api/v1/artworks";
 let img;
 let pieces = [];
 let imageLoaded = false;
-
+let pieceCount = 4;
 function preload() {
   let randomPage = int(random(0,400));
   let url = endpoint+`?page=${randomPage}`;
@@ -31,34 +31,41 @@ function draw() {
     for(let i = 0;i<4;i++){
       pieces.push([]);
       for(let j = 0;j<4;j++){
+        // let piece = img.get();
+        // let pieceMask = generateMask();
         pieces[i].push(img.get());
       }
     }
+
   }
-  let testMask = generateMask(0,0);
-  pieces[0][0].mask(testMask);
-  image(testMask,100,100);
-  image(pieces[0][0],0,0);
-  console.log(pieces[0][0]);
-  // each puzzle piece will be an image that has been clipping masked from the original image
-  // so we need 16 clipping masks in the shape of puzzle pieces
-  // puzzle piece shape: square -> curve edges
+
+  // let testMask = generateMask(100,100,100);
+  // pieces[0][0].mask(testMask);
+  // pieces[0][0] = pieces[0][0].get(100,100,100,100);
+  // image(pieces[0][0],0,0);
+  // console.log(pieces[0][0]);
   noLoop();
 }
 // pieceX,pieceY is coords of the puzzle piece indexing the puzzle like a 2d array
 // ex. top left piece is 0,0
 // we gen mask for each piece moving top to bottom left to right
 // shape for next piece only depends on left and upper previous pieces
-function generateMask(pieceX,pieceY) {
+
+// function imgToPiece(pimg,topLeftX,topLeftY,width,height=width){
+//   let pieceMask = generateMask(mask,topLeftX,topLeftY,width,height);
+//   pimg.mask(pieceMask);
+//   return pimg.get(topLeftX,topLeftY,width,height);
+// }
+function generateMask(pieceX,pieceY,width,height=width) {
   let pieceDims = {
     x: img.width/4,
     y: img.height/4
   };
   let pieceMask = createGraphics(img.width,img.height);
   pieceMask.fill('rgba(0, 0, 0, 1)');
-  let template = generatePieceTemplate(0,0,100);
+  let template = generatePieceTemplate(pieceX,pieceY,width,height);
   pieceMask.beginShape();
-  pieceMask.vertex(0,0);
+  pieceMask.vertex(pieceX,pieceY);
   for(arr of template){
     pieceMask.bezierVertex(...arr);
   }
@@ -67,7 +74,9 @@ function generateMask(pieceX,pieceY) {
   return pieceMask;
 }
 
-function generatePieceTemplate(topLeftX,topLeftY,width,height=width,topOrientation=1,rightOrientation=-1,botOrientation=-1,leftOrientation=1){
+function generatePieceTemplate(topLeftX,topLeftY,width,height=width,topOrientation=-1,rightOrientation=-1,botOrientation=-1,leftOrientation=-1){
+  topOrientation*=-1;
+  leftOrientation*=-1;
   let topLeft = [topLeftX,topLeftY];
   let topRight = [topLeftX+width,topLeftY];
   let botRight = [topLeftX+width,topLeftY+height];
@@ -104,4 +113,22 @@ function generatePieceTemplate(topLeftX,topLeftY,width,height=width,topOrientati
 }
 function getLine(x1,y1,x2,y2,r){
   return [x2 + (x2-x1)/r,y2 + (y2-y1)/r];
+}
+
+function partition(n,p){
+  // parition some number n into p most equal parts
+  let base = Math.floor(n/p);
+  let remainder = n % base;
+  let add = Math.ceil(remainder/p);
+  let res = [];
+  for(let i = 0;i<p;i++){
+    let x = base;
+    if(remainder-add>=0) {
+      remainder-=add;
+      x+=add;
+    }
+    else x += remainder;
+    res.push(x);
+  }
+  return res;
 }
