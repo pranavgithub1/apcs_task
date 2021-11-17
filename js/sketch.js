@@ -127,7 +127,10 @@ function partition(n,p){
       remainder-=add;
       x+=add;
     }
-    else x += remainder;
+    else {
+      x+=remainder;
+      remainder = 0;
+    }
     res.push(x);
   }
   return res;
