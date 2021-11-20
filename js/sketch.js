@@ -37,10 +37,11 @@ function draw() {
   // resize image and generate piece bounds as squares
   img.resize(0,500);
   let imgWHratio = img.height / img.width;
-  // pieceCount[0] = Math.floor(img.width/100)
+  // pieceCount[0] = Math.floor(img.width/100);
   pieceCount[1] = Math.ceil(pieceCount[0] * imgWHratio);
   background(255);
   // generate the pieces
+
   if(pieces.length == 0){
     let xDims = partition(img.width,pieceCount[0]);
     let yDims = partition(img.height,pieceCount[1]);
@@ -60,16 +61,58 @@ function draw() {
     for(let i = 0;i<pieceCount[1];i++){
       pieces.push([]);
       for(let j = 0;j<pieceCount[0];j++){
+
         let pieceWidth = xDims[j];
         let pieceHeight = yDims[i];
-        pieces[i].push(img.get());
-        let pieceMask = generateMask(prefxDims[j],prefyDims[i],pieceWidth,pieceHeight);
-        pieces[i][j].mask(pieceMask);
-        image(pieces[i][j],0,0);
+        let pieceX = prefxDims[j];
+        let pieceY = prefyDims[i];
+
+        let curOrientations = getRandomOrientations();
+        if(j==0) curOrientations[3]=0;
+        if(j==pieceCount[0]-1) curOrientations[1]=0;
+        if(i==0) curOrientations[0]=0;
+        if(i==pieceCount[1]-1) curOrientations[2]=0;
+        if(i>0){
+          curOrientations[0] = pieces[i-1][j].orientations[2] * -1;
+        }
+        if(j>0){
+          curOrientations[3] = pieces[i][j-1].orientations[1] * -1;
+        }
+        // generate the piece
+        let tempImage = img.get();
+        let pieceMask = generateMask(pieceX,pieceY,pieceWidth,pieceHeight,curOrientations);
+        tempImage.mask(pieceMask);
+        let pieceGraphics = createGraphics(img.width,img.height);
+        // pieceGraphics.clear();
+        pieceGraphics.image(tempImage,0,0);
+        pieceGraphics.noFill();
+        pieceGraphics.strokeWeight(1);
+        let pieceBorder = generatePieceTemplate(pieceX,pieceY,pieceWidth,pieceHeight,...curOrientations);
+        pieceGraphics.beginShape();
+        pieceGraphics.vertex(pieceX,pieceY);
+        for(arr of pieceBorder){
+          pieceGraphics.bezierVertex(...arr);
+        }
+        pieceGraphics.endShape();
+        let p = new myPiece(pieceGraphics,curOrientations,pieceX,pieceY);
+        pieces[i].push(p);
+        image(p.skin,0,0);
+        // if(i==0&&j==0) save(p.skin);
+        // point(pieceX,pieceY);
+        // stroke('red');
+        // strokeWeight(5);
       }
     }
   }
 
+  // let tempImage = img.get();
+  // let pieceMask = generateMask(100,100,100,100,[1,1,1,1]);
+  // tempImage.mask(pieceMask);
+  // save(tempImage,'piece.png');
+  // image(tempImage,0,0);
+
+  // console.log(pieces);
+  // point(605,468);
   // let testMask = generateMask(100,100,100);
   // pieces[0][0].mask(testMask);
   // pieces[0][0] = pieces[0][0].get(100,100,100,100);
@@ -77,20 +120,31 @@ function draw() {
   // console.log(pieces[0][0]);
   noLoop();
 }
-// pieceX,pieceY is coords of the puzzle piece indexing the puzzle like a 2d array
-// ex. top left piece is 0,0
-// we gen mask for each piece moving top to bottom left to right
-// shape for next piece only depends on left and upper previous pieces
-
-// function imgToPiece(pimg,topLeftX,topLeftY,width,height=width){
-//   let pieceMask = generateMask(mask,topLeftX,topLeftY,width,height);
-//   pimg.mask(pieceMask);
-//   return pimg.get(topLeftX,topLeftY,width,height);
+// function generatePiece(pieceX,pieceY,width,height=width,orientations){
+//   let tempImage = img.get();
+//   let pieceMask = generateMask(pieceX,pieceY,pieceWidth,pieceHeight,curOrientations);
+//   tempImage.mask(pieceMask);
+//   let pieceGraphics = createGraphics(img.width,img.height);
+//   // pieceGraphics.clear();
+//   pieceGraphics.image(tempImage,0,0);
+//   pieceGraphics.noFill();
+//   stroke('red');
+//   pieceGraphics.strokeWeight(1);
+//   let pieceBorder = generatePieceTemplate(pieceX,pieceY,pieceWidth,pieceHeight,curOrientations);
+//   pieceGraphics.beginShape();
+//   pieceGraphics.vertex(pieceX,pieceY);
+//   for(arr of pieceBorder){
+//     pieceGraphics.bezierVertex(...arr);
+//   }
+//   pieceGraphics.endShape();
+//   let p = new myPiece(pieceGraphics,curOrientations,pieceX,pieceY);
 // }
-function generateMask(pieceX,pieceY,width,height=width) {
+function generateMask(pieceX,pieceY,width,height=width,orientations) {
   let pieceMask = createGraphics(img.width,img.height);
+  pieceMask.clear();
+  // pieceMask.background('rgba(0, 0, 0, 0');
   pieceMask.fill('rgba(0, 0, 0, 1)');
-  let template = generatePieceTemplate(pieceX,pieceY,width,height);
+  let template = generatePieceTemplate(pieceX,pieceY,width,height,...orientations);
   pieceMask.beginShape();
   pieceMask.vertex(pieceX,pieceY);
   for(arr of template){
@@ -108,13 +162,17 @@ function generatePieceTemplate(topLeftX,topLeftY,width,height=width,topOrientati
   let topRight = [topLeftX+width,topLeftY];
   let botRight = [topLeftX+width,topLeftY+height];
   let botLeft = [topLeftX,topLeftY+height];
-  let tabHeight = normalize(width,15);
+  let tabHeight = normalize(width,20);//-Math.floor((100-width)/10);
+  //Math.floor((100)/width);
+  console.log(tabHeight);
   let tabInset = normalize(width,40);
   let c1 = normalize(width,20);
   let c2 = normalize(width,50);
-  let r = normalize(width,1);
+  let r = 1.5;
   let topBridgeStart = [topLeft[0]+(tabInset),topLeft[1]+(tabHeight*topOrientation)];
   let topBridgeEnd = [topRight[0]-(tabInset),topRight[1]+(tabHeight*topOrientation)];
+  // console.log(topBridgeStart);
+  // console.log(topBridgeEnd);
   let rightBridgeStart = [topRight[0]+(tabHeight*rightOrientation),topRight[1]+tabInset];
   let rightBridgeEnd = [botRight[0]+(tabHeight*rightOrientation),botRight[1]-tabInset];
   let botBridgeStart = [botRight[0]-tabInset,botRight[1]+(tabHeight*botOrientation)];
@@ -141,7 +199,7 @@ function generatePieceTemplate(topLeftX,topLeftY,width,height=width,topOrientati
   return masterTemplate;
 }
 function getLine(x1,y1,x2,y2,r){
-  return [x2 + (x2-x1)/r,y2 + (y2-y1)/r];
+  return [x2 + Math.floor((x2-x1)/r),y2 + Math.floor((y2-y1)/r)];
 }
 
 function partition(n,p){
@@ -167,4 +225,21 @@ function partition(n,p){
 
 function normalize(dim,parameter,to=100){
   return Math.ceil((parameter/to)*dim);
+}
+function getRandomOrientations(){
+  let res = []
+  for(let i = 0;i<4;i++){
+    let r = Math.random();
+    if(r>=0.5) res.push(1);
+    else res.push(-1);
+  }
+  return res;
+}
+class myPiece {
+  constructor(skin,orientations,x,y){
+    this.skin = skin;
+    this.orientations = orientations;
+    this.x = x;
+    this.y = y;
+  }
 }
