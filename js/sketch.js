@@ -5,6 +5,10 @@ let pieces = [];
 let imageLoaded = false;
 let loadRandom = false;
 let pieceCount = [5,0];
+let xDims;
+let yDims;
+let prefxDims;
+let prefyDims;
 function preload() {
   if(loadRandom){
     let randomPage = int(random(0,400));
@@ -43,10 +47,10 @@ function draw() {
   // generate the pieces
 
   if(pieces.length == 0){
-    let xDims = partition(img.width,pieceCount[0]);
-    let yDims = partition(img.height,pieceCount[1]);
-    let prefxDims = [0];
-    let prefyDims = [0];
+    xDims = partition(img.width,pieceCount[0]);
+    yDims = partition(img.height,pieceCount[1]);
+    prefxDims = [0];
+    prefyDims = [0];
     for(let i = 0;i<xDims.length-1;i++){
       prefxDims.push(prefxDims[i] + xDims[i]);
     }
@@ -62,39 +66,7 @@ function draw() {
       pieces.push([]);
       for(let j = 0;j<pieceCount[0];j++){
 
-        let pieceWidth = xDims[j];
-        let pieceHeight = yDims[i];
-        let pieceX = prefxDims[j];
-        let pieceY = prefyDims[i];
-
-        let curOrientations = getRandomOrientations();
-        if(j==0) curOrientations[3]=0;
-        if(j==pieceCount[0]-1) curOrientations[1]=0;
-        if(i==0) curOrientations[0]=0;
-        if(i==pieceCount[1]-1) curOrientations[2]=0;
-        if(i>0){
-          curOrientations[0] = pieces[i-1][j].orientations[2] * -1;
-        }
-        if(j>0){
-          curOrientations[3] = pieces[i][j-1].orientations[1] * -1;
-        }
-        // generate the piece
-        let tempImage = img.get();
-        let pieceMask = generateMask(pieceX,pieceY,pieceWidth,pieceHeight,curOrientations);
-        tempImage.mask(pieceMask);
-        let pieceGraphics = createGraphics(img.width,img.height);
-        // pieceGraphics.clear();
-        pieceGraphics.image(tempImage,0,0);
-        pieceGraphics.noFill();
-        pieceGraphics.strokeWeight(1);
-        let pieceBorder = generatePieceTemplate(pieceX,pieceY,pieceWidth,pieceHeight,...curOrientations);
-        pieceGraphics.beginShape();
-        pieceGraphics.vertex(pieceX,pieceY);
-        for(arr of pieceBorder){
-          pieceGraphics.bezierVertex(...arr);
-        }
-        pieceGraphics.endShape();
-        let p = new myPiece(pieceGraphics,curOrientations,pieceX,pieceY);
+        let p = generatePiece(i,j);
         pieces[i].push(p);
         image(p.skin,0,0);
         // if(i==0&&j==0) save(p.skin);
@@ -120,31 +92,51 @@ function draw() {
   // console.log(pieces[0][0]);
   noLoop();
 }
-// function generatePiece(pieceX,pieceY,width,height=width,orientations){
-//   let tempImage = img.get();
-//   let pieceMask = generateMask(pieceX,pieceY,pieceWidth,pieceHeight,curOrientations);
-//   tempImage.mask(pieceMask);
-//   let pieceGraphics = createGraphics(img.width,img.height);
-//   // pieceGraphics.clear();
-//   pieceGraphics.image(tempImage,0,0);
-//   pieceGraphics.noFill();
-//   stroke('red');
-//   pieceGraphics.strokeWeight(1);
-//   let pieceBorder = generatePieceTemplate(pieceX,pieceY,pieceWidth,pieceHeight,curOrientations);
-//   pieceGraphics.beginShape();
-//   pieceGraphics.vertex(pieceX,pieceY);
-//   for(arr of pieceBorder){
-//     pieceGraphics.bezierVertex(...arr);
-//   }
-//   pieceGraphics.endShape();
-//   let p = new myPiece(pieceGraphics,curOrientations,pieceX,pieceY);
-// }
-function generateMask(pieceX,pieceY,width,height=width,orientations) {
+function generatePiece(pieceRow,pieceCol) {
+  let pieceWidth = xDims[pieceCol];
+  let pieceHeight = yDims[pieceRow];
+  let pieceX = prefxDims[pieceCol];
+  let pieceY = prefyDims[pieceRow];
+
+  let curOrientations = getRandomOrientations();
+  if(pieceCol==0) curOrientations[3]=0;
+  if(pieceCol==pieceCount[0]-1) curOrientations[1]=0;
+  if(pieceRow==0) curOrientations[0]=0;
+  if(pieceRow==pieceCount[1]-1) curOrientations[2]=0;
+  if(pieceRow>0){
+    curOrientations[0] = pieces[pieceRow-1][pieceCol].orientations[2] * -1;
+  }
+  if(pieceCol>0){
+    curOrientations[3] = pieces[pieceRow][pieceCol-1].orientations[1] * -1;
+  }
+  // generate the piece
+  let tempImage = img.get();
+  let pieceMask = generateMask(pieceRow,pieceCol,curOrientations);
+  tempImage.mask(pieceMask);
+  let pieceGraphics = createGraphics(img.width,img.height);
+  // pieceGraphics.clear();
+  pieceGraphics.image(tempImage,0,0);
+  pieceGraphics.noFill();
+  pieceGraphics.strokeWeight(1);
+  let pieceBorder = generatePieceTemplate(pieceRow,pieceCol,curOrientations);
+  pieceGraphics.beginShape();
+  pieceGraphics.vertex(pieceX,pieceY);
+  for(arr of pieceBorder){
+    pieceGraphics.bezierVertex(...arr);
+  }
+  pieceGraphics.endShape();
+  let p = new myPiece(pieceGraphics,curOrientations,pieceX,pieceY);
+  return p;
+};
+
+function generateMask(pieceRow,pieceCol,orientations) {
+  let pieceX = prefxDims[pieceCol];
+  let pieceY = prefyDims[pieceRow];
   let pieceMask = createGraphics(img.width,img.height);
   pieceMask.clear();
   // pieceMask.background('rgba(0, 0, 0, 0');
   pieceMask.fill('rgba(0, 0, 0, 1)');
-  let template = generatePieceTemplate(pieceX,pieceY,width,height,...orientations);
+  let template = generatePieceTemplate(pieceRow,pieceCol,orientations);
   pieceMask.beginShape();
   pieceMask.vertex(pieceX,pieceY);
   for(arr of template){
@@ -155,7 +147,18 @@ function generateMask(pieceX,pieceY,width,height=width,orientations) {
   return pieceMask;
 }
 
-function generatePieceTemplate(topLeftX,topLeftY,width,height=width,topOrientation=-1,rightOrientation=-1,botOrientation=-1,leftOrientation=-1){
+function generatePieceTemplate(pieceRow,pieceCol,orientations){
+
+  let width = xDims[pieceCol];
+  let height = yDims[pieceRow];
+  let topLeftX = prefxDims[pieceCol];
+  let topLeftY = prefyDims[pieceRow];
+
+  topOrientation = orientations[0];
+  rightOrientation = orientations[1];
+  botOrientation = orientations[2];
+  leftOrientation = orientations[3];
+
   topOrientation*=-1;
   leftOrientation*=-1;
   let topLeft = [topLeftX,topLeftY];
