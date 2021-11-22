@@ -111,40 +111,44 @@ function generatePiece(pieceRow,pieceCol) {
   }
   // generate the piece
   let tempImage = img.get();
-  let pieceMask = generateMask(pieceRow,pieceCol,curOrientations);
+  let res = generateMask(pieceRow,pieceCol,curOrientations);
+  let pieceMask = res[0];
+  let pieceData = res[1];
   tempImage.mask(pieceMask);
   let pieceGraphics = createGraphics(img.width,img.height);
   // pieceGraphics.clear();
   pieceGraphics.image(tempImage,0,0);
   pieceGraphics.noFill();
   pieceGraphics.strokeWeight(1);
-  let pieceBorder = generatePieceTemplate(pieceRow,pieceCol,curOrientations);
+  // let pieceBorder = generatePieceTemplate(pieceRow,pieceCol,curOrientations)[0];
+  let pieceBorder = pieceData.template;
   pieceGraphics.beginShape();
-  pieceGraphics.vertex(pieceX,pieceY);
+  pieceGraphics.vertex(pieceData.topLeft[0],pieceData.topLeft[1]);
   for(arr of pieceBorder){
     pieceGraphics.bezierVertex(...arr);
   }
   pieceGraphics.endShape();
-  let p = new myPiece(pieceGraphics,curOrientations,pieceX,pieceY);
+  let p = new myPiece(pieceGraphics,curOrientations,pieceRow,pieceCol,pieceData);
   return p;
 };
 
 function generateMask(pieceRow,pieceCol,orientations) {
-  let pieceX = prefxDims[pieceCol];
-  let pieceY = prefyDims[pieceRow];
+  // let pieceX = prefxDims[pieceCol];
+  // let pieceY = prefyDims[pieceRow];
   let pieceMask = createGraphics(img.width,img.height);
   pieceMask.clear();
   // pieceMask.background('rgba(0, 0, 0, 0');
   pieceMask.fill('rgba(0, 0, 0, 1)');
-  let template = generatePieceTemplate(pieceRow,pieceCol,orientations);
+  let pieceData = generatePieceTemplate(pieceRow,pieceCol,orientations);
+  let template = pieceData.template;
   pieceMask.beginShape();
-  pieceMask.vertex(pieceX,pieceY);
+  pieceMask.vertex(pieceData.topLeft[0],pieceData.topLeft[1]);
   for(arr of template){
     pieceMask.bezierVertex(...arr);
   }
   pieceMask.endShape();
 
-  return pieceMask;
+  return [pieceMask,pieceData];
 }
 
 function generatePieceTemplate(pieceRow,pieceCol,orientations){
@@ -154,34 +158,72 @@ function generatePieceTemplate(pieceRow,pieceCol,orientations){
   let topLeftX = prefxDims[pieceCol];
   let topLeftY = prefyDims[pieceRow];
 
-  topOrientation = orientations[0];
-  rightOrientation = orientations[1];
-  botOrientation = orientations[2];
-  leftOrientation = orientations[3];
+  let topOrientation = orientations[0] * -1;
+  let rightOrientation = orientations[1];
+  let botOrientation = orientations[2];
+  let leftOrientation = orientations[3] * -1;
 
-  topOrientation*=-1;
-  leftOrientation*=-1;
+
   let topLeft = [topLeftX,topLeftY];
   let topRight = [topLeftX+width,topLeftY];
   let botRight = [topLeftX+width,topLeftY+height];
   let botLeft = [topLeftX,topLeftY+height];
   let tabHeight = normalize(width,20);//-Math.floor((100-width)/10);
-  //Math.floor((100)/width);
-  console.log(tabHeight);
+    console.log(tabHeight);
   let tabInset = normalize(width,40);
   let c1 = normalize(width,20);
   let c2 = normalize(width,50);
   let r = 1.5;
   let topBridgeStart = [topLeft[0]+(tabInset),topLeft[1]+(tabHeight*topOrientation)];
   let topBridgeEnd = [topRight[0]-(tabInset),topRight[1]+(tabHeight*topOrientation)];
-  // console.log(topBridgeStart);
-  // console.log(topBridgeEnd);
   let rightBridgeStart = [topRight[0]+(tabHeight*rightOrientation),topRight[1]+tabInset];
   let rightBridgeEnd = [botRight[0]+(tabHeight*rightOrientation),botRight[1]-tabInset];
   let botBridgeStart = [botRight[0]-tabInset,botRight[1]+(tabHeight*botOrientation)];
   let botBridgeEnd = [botLeft[0]+tabInset,botLeft[1]+(tabHeight*botOrientation)];
   let leftBridgeStart = [botLeft[0]+(tabHeight*leftOrientation),botLeft[1]-tabInset];
   let leftBridgeEnd = [topLeft[0]+(tabHeight*leftOrientation),topLeft[1]+tabInset];
+  if(pieceRow != pieceCount[1]-1 && pieceCol!= pieceCount[0]-1){
+    nudge(botRight,5);
+  }
+  if(pieceRow > 0){
+    topLeft = pieces[pieceRow-1][pieceCol].data.botLeft;
+    topBridgeStart = pieces[pieceRow-1][pieceCol].data.botBridgeEnd;
+    topBridgeEnd = pieces[pieceRow-1][pieceCol].data.botBridgeStart;
+    topRight = pieces[pieceRow-1][pieceCol].data.botRight;
+  }
+  if(pieceCol > 0){
+    botLeft = pieces[pieceRow][pieceCol-1].data.botRight;
+    leftBridgeStart = pieces[pieceRow][pieceCol-1].data.rightBridgeEnd;
+    leftBridgeEnd = pieces[pieceRow][pieceCol-1].data.rightBridgeStart;
+    topLeft = pieces[pieceRow][pieceCol-1].data.topRight;
+
+  }
+  let pieceData = {
+    width: width,
+    height: height,
+    topLeft: topLeft,
+    topRight: topRight,
+    botLeft: botLeft,
+    botRight: botRight,
+    topOrientation: topOrientation,
+    rightOrientation: rightOrientation,
+    botOrientation: botOrientation,
+    leftOrientation: leftOrientation,
+    tabInset: tabInset,
+    tabHeight: tabHeight,
+    c1: c1,
+    c2: c2,
+    r: r,
+    topBridgeStart: topBridgeStart,
+    topBridgeEnd: topBridgeEnd,
+    rightBridgeStart: rightBridgeStart,
+    rightBridgeEnd: rightBridgeEnd,
+    botBridgeStart: botBridgeStart,
+    botBridgeEnd: botBridgeEnd,
+    leftBridgeStart: leftBridgeStart,
+    leftBridgeEnd: leftBridgeEnd,
+    // template: [],
+  }
   let masterTemplate = [
     [topLeft[0]+c1,topLeft[1],topLeft[0]+c2,topLeft[1],...topBridgeStart],
     [...getLine(topLeft[0]+c2,topLeft[1],...topBridgeStart,r),...getLine(topRight[0]-c2,topRight[1],...topBridgeEnd,r),...topBridgeEnd],
@@ -199,7 +241,8 @@ function generatePieceTemplate(pieceRow,pieceCol,orientations){
     [...getLine(botLeft[0],botLeft[1]-c2,...leftBridgeStart,r),...getLine(topLeft[0],topLeft[1]+c2,...leftBridgeEnd,r),...leftBridgeEnd],
     [topLeft[0],topLeft[1]+c2,topLeft[0],topLeft[1]+c1,topLeft[0],topLeft[1]]
   ];
-  return masterTemplate;
+  pieceData.template = masterTemplate;
+  return pieceData;
 }
 function getLine(x1,y1,x2,y2,r){
   return [x2 + Math.floor((x2-x1)/r),y2 + Math.floor((y2-y1)/r)];
@@ -238,11 +281,43 @@ function getRandomOrientations(){
   }
   return res;
 }
+function nudge(point,d){
+  let x = Math.floor(Math.random() * d);
+  let y = Math.floor(Math.random() * d);
+  let xSign = (Math.random()>=0.5)? 1 : -1;
+  let ySign = (Math.random()>=0.5)? 1 : -1;
+  point[0] += (x*xSign);
+  point[1] += (y*ySign);
+}
 class myPiece {
-  constructor(skin,orientations,x,y){
+  constructor(skin,orientations,pieceRow,pieceCol,pieceData){
     this.skin = skin;
     this.orientations = orientations;
-    this.x = x;
-    this.y = y;
+    this.row = pieceRow;
+    this.col = pieceCol;
+    this.data = pieceData;
+    // this.width = xDims[pieceCol];
+    // this.height = yDims[pieceRow];
+    // this.x = prefxDims[pieceCol];
+    // this.y = prefyDims[pieceRow];
+
+    // this.topLeft = [this.x,this.y];
+    // this.topRight = [this.x+this.width,this.y];
+    // this.botRight = [this.x+this.width,this.y+this.height];
+    // this.botLeft = [this.x,this.y+this.height];
+
+    // this.topOrientation = this.orientations[0] * -1;
+    // this.rightOrientation = this.orientations[1];
+    // this.botOrientation = this.orientations[2];
+    // this.leftOrientation = this.orientations[3] * -1;
+
+    // this.topBridgeStart = [this.topLeft[0]+(tabInset),this.topLeft[1]+(tabHeight*this.topOrientation)];
+    // this.topBridgeEnd = [this.topRight[0]-(tabInset),this.topRight[1]+(tabHeight*this.topOrientation)];
+    // this.rightBridgeStart = [this.topRight[0]+(tabHeight*this.rightOrientation),this.topRight[1]+tabInset];
+    // this.rightBridgeEnd = [this.botRight[0]+(tabHeight*this.rightOrientation),this.botRight[1]-tabInset];
+    // this.botBridgeStart = [this.botRight[0]-tabInset,this.botRight[1]+(tabHeight*this.botOrientation)];
+    // this.botBridgeEnd = [this.botLeft[0]+tabInset,this.botLeft[1]+(tabHeight*this.botOrientation)];
+    // this.leftBridgeStart = [this.botLeft[0]+(tabHeight*this.leftOrientation),this.botLeft[1]-tabInset];
+    // this.leftBridgeEnd = [this.topLeft[0]+(tabHeight*this.leftOrientation),this.topLeft[1]+tabInset];
   }
 }
