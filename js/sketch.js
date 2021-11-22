@@ -4,7 +4,7 @@ let img;
 let pieces = [];
 let imageLoaded = false;
 let loadRandom = false;
-let pieceCount = [5,0];
+let pieceCount = [15,0];
 let xDims;
 let yDims;
 let prefxDims;
@@ -69,27 +69,11 @@ function draw() {
         let p = generatePiece(i,j);
         pieces[i].push(p);
         image(p.skin,0,0);
-        // if(i==0&&j==0) save(p.skin);
-        // point(pieceX,pieceY);
-        // stroke('red');
-        // strokeWeight(5);
       }
     }
   }
 
-  // let tempImage = img.get();
-  // let pieceMask = generateMask(100,100,100,100,[1,1,1,1]);
-  // tempImage.mask(pieceMask);
-  // save(tempImage,'piece.png');
-  // image(tempImage,0,0);
-
-  // console.log(pieces);
-  // point(605,468);
-  // let testMask = generateMask(100,100,100);
-  // pieces[0][0].mask(testMask);
-  // pieces[0][0] = pieces[0][0].get(100,100,100,100);
-  // image(pieces[0][0],0,0);
-  // console.log(pieces[0][0]);
+  
   noLoop();
 }
 function generatePiece(pieceRow,pieceCol) {
@@ -182,8 +166,17 @@ function generatePieceTemplate(pieceRow,pieceCol,orientations){
   let botBridgeEnd = [botLeft[0]+tabInset,botLeft[1]+(tabHeight*botOrientation)];
   let leftBridgeStart = [botLeft[0]+(tabHeight*leftOrientation),botLeft[1]-tabInset];
   let leftBridgeEnd = [topLeft[0]+(tabHeight*leftOrientation),topLeft[1]+tabInset];
+  let nudgeDist = Math.ceil(width*0.04);
   if(pieceRow != pieceCount[1]-1 && pieceCol!= pieceCount[0]-1){
-    nudge(botRight,5);
+    nudge(botRight,nudgeDist);
+  }
+  if(pieceRow!=pieceCount[1]-1){
+    nudge(botBridgeStart,nudgeDist);
+    nudge(botBridgeEnd,nudgeDist);
+  }
+  if(pieceCol!=pieceCount[0]-1){
+    nudge(rightBridgeStart,nudgeDist);
+    nudge(rightBridgeEnd,nudgeDist);
   }
   if(pieceRow > 0){
     topLeft = pieces[pieceRow-1][pieceCol].data.botLeft;
