@@ -3,12 +3,17 @@ let endpoint = "https://api.artic.edu/api/v1/artworks";
 let img;
 let pieces = [];
 let imageLoaded = false;
-let loadRandom = false;
-let pieceCount = [15,0];
+let loadRandom = true;
+let pieceGen = false;
+let pieceCount = [5,0];
 let xDims;
 let yDims;
 let prefxDims;
 let prefyDims;
+let currentlyGrabbed;
+let grabbedX;
+let grabbedY;
+let piecesToDraw = [];
 function preload() {
   if(loadRandom){
     let randomPage = int(random(0,400));
@@ -26,7 +31,8 @@ function preload() {
     });
   }
   else {
-    img = loadImage('https://www.artic.edu/iiif/2/4a87e43e-8777-d36f-126d-545286eb9c4f/full/843,/0/default.jpg');
+    img = loadImage('https://www.artic.edu/iiif/2/7199435b-6e92-4c2c-b22a-8333339b87d8/full/843,/0/default.jpg');
+    // img = loadImage('https://www.artic.edu/iiif/2/4a87e43e-8777-d36f-126d-545286eb9c4f/full/843,/0/default.jpg');
     imageLoaded = true;
   }
   
@@ -41,12 +47,12 @@ function draw() {
   // resize image and generate piece bounds as squares
   img.resize(0,500);
   let imgWHratio = img.height / img.width;
-  // pieceCount[0] = Math.floor(img.width/100);
+  pieceCount[0] = Math.floor(img.width/100);
   pieceCount[1] = Math.ceil(pieceCount[0] * imgWHratio);
   background(255);
   // generate the pieces
-
-  if(pieces.length == 0){
+  pieceId = 0;
+  if(!pieceGen){
     xDims = partition(img.width,pieceCount[0]);
     yDims = partition(img.height,pieceCount[1]);
     prefxDims = [0];
@@ -65,22 +71,49 @@ function draw() {
     for(let i = 0;i<pieceCount[1];i++){
       pieces.push([]);
       for(let j = 0;j<pieceCount[0];j++){
-
-        let p = generatePiece(i,j);
+        let p = generatePiece(i,j,pieceId);
+        pieceId++;
         pieces[i].push(p);
-        image(p.skin,0,0);
+        piecesToDraw.push(p);
       }
     }
+    pieces = null;
+    pieceGen=true;
   }
 
-  
-  noLoop();
+  for(piece of piecesToDraw){
+    image(piece.skin,piece.x,piece.y);
+  }
+
 }
-function generatePiece(pieceRow,pieceCol) {
-  let pieceWidth = xDims[pieceCol];
-  let pieceHeight = yDims[pieceRow];
-  let pieceX = prefxDims[pieceCol];
-  let pieceY = prefyDims[pieceRow];
+function mousePressed(){
+  for(let i = piecesToDraw.length-1;i>=0;i--){
+    let xpos = piecesToDraw[i].x;
+    let ypos = piecesToDraw[i].y;
+    let [r,g,b,a] = piecesToDraw[i].skin.get(mouseX-xpos,mouseY-ypos);
+    if(a!=0) {
+      currentlyGrabbed = piecesToDraw[i];
+      grabbedX = mouseX - currentlyGrabbed.x;
+      grabbedY = mouseY - currentlyGrabbed.y;
+      piecesToDraw.splice(i,1);
+      piecesToDraw.push(currentlyGrabbed);
+      return;
+    }
+  }
+}
+function mouseDragged(){
+  if(currentlyGrabbed!=null){
+
+    currentlyGrabbed.x = mouseX - grabbedX;
+    currentlyGrabbed.y = mouseY - grabbedY;
+  }
+}
+function mouseReleased(){
+  currentlyGrabbed = null;
+  grabbedX = null;
+  grabbedY = null;
+}
+function generatePiece(pieceRow,pieceCol,pieceId) {
 
   let curOrientations = getRandomOrientations();
   if(pieceCol==0) curOrientations[3]=0;
@@ -112,7 +145,8 @@ function generatePiece(pieceRow,pieceCol) {
     pieceGraphics.bezierVertex(...arr);
   }
   pieceGraphics.endShape();
-  let p = new myPiece(pieceGraphics,curOrientations,pieceRow,pieceCol,pieceData);
+  // let pieceElement = createImg(pieceGraphics.canvas.toDataURL(),`piece ${pieceId}`);
+  let p = new myPiece(pieceGraphics.get(),curOrientations,pieceRow,pieceCol,pieceData,pieceId,100,100);
   return p;
 };
 
@@ -166,17 +200,18 @@ function generatePieceTemplate(pieceRow,pieceCol,orientations){
   let botBridgeEnd = [botLeft[0]+tabInset,botLeft[1]+(tabHeight*botOrientation)];
   let leftBridgeStart = [botLeft[0]+(tabHeight*leftOrientation),botLeft[1]-tabInset];
   let leftBridgeEnd = [topLeft[0]+(tabHeight*leftOrientation),topLeft[1]+tabInset];
-  let nudgeDist = Math.ceil(width*0.04);
+  let bridgeNudgeDist = normalize(width,5,125);
+  let botRightNudgeDist = normalize(width,10,125)// + Math.ceil((125-width)/42);
   if(pieceRow != pieceCount[1]-1 && pieceCol!= pieceCount[0]-1){
-    nudge(botRight,nudgeDist);
+    nudge(botRight,botRightNudgeDist);
   }
   if(pieceRow!=pieceCount[1]-1){
-    nudge(botBridgeStart,nudgeDist);
-    nudge(botBridgeEnd,nudgeDist);
+    nudge(botBridgeStart,bridgeNudgeDist);
+    nudge(botBridgeEnd,bridgeNudgeDist);
   }
   if(pieceCol!=pieceCount[0]-1){
-    nudge(rightBridgeStart,nudgeDist);
-    nudge(rightBridgeEnd,nudgeDist);
+    nudge(rightBridgeStart,bridgeNudgeDist);
+    nudge(rightBridgeEnd,bridgeNudgeDist);
   }
   if(pieceRow > 0){
     topLeft = pieces[pieceRow-1][pieceCol].data.botLeft;
@@ -283,12 +318,17 @@ function nudge(point,d){
   point[1] += (y*ySign);
 }
 class myPiece {
-  constructor(skin,orientations,pieceRow,pieceCol,pieceData){
+  constructor(skin,orientations,pieceRow,pieceCol,pieceData,id,x,y){
     this.skin = skin;
+    // this.skin.mousePressed()
     this.orientations = orientations;
     this.row = pieceRow;
     this.col = pieceCol;
     this.data = pieceData;
+    this.id = id;
+    this.grabbed = false;
+    this.x = x;
+    this.y = y;
     // this.width = xDims[pieceCol];
     // this.height = yDims[pieceRow];
     // this.x = prefxDims[pieceCol];
@@ -314,3 +354,5 @@ class myPiece {
     // this.leftBridgeEnd = [this.topLeft[0]+(tabHeight*this.leftOrientation),this.topLeft[1]+tabInset];
   }
 }
+
+
