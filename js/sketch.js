@@ -3,7 +3,7 @@ let endpoint = "https://api.artic.edu/api/v1/artworks";
 let img;
 let pieces = [];
 let imageLoaded = false;
-let loadRandom = true;
+let loadRandom = false;
 let pieceGen = false;
 let pieceCount = [5,0];
 let xDims;
@@ -14,6 +14,7 @@ let currentlyGrabbed;
 let grabbedX;
 let grabbedY;
 let piecesToDraw = [];
+let pieceMap;
 function preload() {
   if(loadRandom){
     let randomPage = int(random(0,400));
@@ -31,7 +32,7 @@ function preload() {
     });
   }
   else {
-    img = loadImage('https://www.artic.edu/iiif/2/7199435b-6e92-4c2c-b22a-8333339b87d8/full/843,/0/default.jpg');
+    img = loadImage('https://www.artic.edu/iiif/2/4636c76d-8ff1-6f00-b409-e10438d1320b/full/843,/0/default.jpg');
     // img = loadImage('https://www.artic.edu/iiif/2/4a87e43e-8777-d36f-126d-545286eb9c4f/full/843,/0/default.jpg');
     imageLoaded = true;
   }
@@ -47,7 +48,7 @@ function draw() {
   // resize image and generate piece bounds as squares
   img.resize(0,500);
   let imgWHratio = img.height / img.width;
-  pieceCount[0] = Math.floor(img.width/100);
+  // pieceCount[0] = Math.floor(img.width/100);
   pieceCount[1] = Math.ceil(pieceCount[0] * imgWHratio);
   background(255);
   // generate the pieces
@@ -78,13 +79,14 @@ function draw() {
       }
     }
     pieces = null;
+    pieceMap = piecesToDraw.slice();
     pieceGen=true;
   }
 
   for(piece of piecesToDraw){
     image(piece.skin,piece.x,piece.y);
   }
-
+  // console.log(pieceMap[0].x);
 }
 function mousePressed(){
   for(let i = piecesToDraw.length-1;i>=0;i--){
@@ -109,6 +111,34 @@ function mouseDragged(){
   }
 }
 function mouseReleased(){
+  if(currentlyGrabbed===null) return;
+  // top fit
+  if(currentlyGrabbed.row > 0){
+    let top = pieceMap[currentlyGrabbed.id - pieceCount[0]];
+    let xy = [currentlyGrabbed.x,currentlyGrabbed.y];
+    let xyt = [top.x,top.y]
+    let curTopLeft = vecAdd(currentlyGrabbed.data.topLeft,xy);
+    let curTopRight = vecAdd(currentlyGrabbed.data.topRight,xy)
+    let topBotLeft = vecAdd(top.data.botLeft,xyt);
+    let topBotRight = vecAdd(top.data.botRight,xyt)
+    if(pointDist(...curTopLeft,...topBotLeft)<5 && pointDist(...curTopRight,...topBotRight)<5){
+      [currentlyGrabbed.x,currentlyGrabbed.y] = vecAdd(topBotLeft,currentlyGrabbed.data.topLeft,-1);
+    }
+  }
+  // bottom fit
+  if(currentlyGrabbed.row+1 < pieceCount[1]-1){
+    let bot = pieceMap[currentlyGrabbed.id + pieceCount[0]];
+    let xy = [currentlyGrabbed.x,currentlyGrabbed.y];
+    let xyb = [bot.x,bot.y];
+    let curBotLeft = vecAdd(currentlyGrabbed.data.botLeft,xy);
+    let curBotRight = vecAdd(currentlyGrabbed.data.botRight,xy);
+    let botTopLeft = vecAdd(bot.data.topLeft,xyb);
+    let botTopRight = vecAdd(bot.data.topRight,xyb);
+    if(pointDist(...curBotLeft,...botTopLeft)<5 && pointDist(...curBotRight,...botTopRight)<5){
+      [currentlyGrabbed.x,currentlyGrabbed.y] = vecAdd(botTopLeft,currentlyGrabbed.data.botLeft,-1);
+    }
+  }
+  
   currentlyGrabbed = null;
   grabbedX = null;
   grabbedY = null;
@@ -145,6 +175,9 @@ function generatePiece(pieceRow,pieceCol,pieceId) {
     pieceGraphics.bezierVertex(...arr);
   }
   pieceGraphics.endShape();
+  pieceGraphics.stroke('red');
+  pieceGraphics.strokeWeight('4');
+  pieceGraphics.point(pieceData.topLeft[0],pieceData.topLeft[1]);
   // let pieceElement = createImg(pieceGraphics.canvas.toDataURL(),`piece ${pieceId}`);
   let p = new myPiece(pieceGraphics.get(),curOrientations,pieceRow,pieceCol,pieceData,pieceId,100,100);
   return p;
@@ -191,15 +224,19 @@ function generatePieceTemplate(pieceRow,pieceCol,orientations){
   let tabInset = normalize(width,40);
   let c1 = normalize(width,20);
   let c2 = normalize(width,50);
+  let htabHeight = normalize(height,20);
+  let htabInset = normalize(height,40);
+  let hc1 = normalize(height,20);
+  let hc2 = normalize(height,50);
   let r = 1.5;
   let topBridgeStart = [topLeft[0]+(tabInset),topLeft[1]+(tabHeight*topOrientation)];
   let topBridgeEnd = [topRight[0]-(tabInset),topRight[1]+(tabHeight*topOrientation)];
-  let rightBridgeStart = [topRight[0]+(tabHeight*rightOrientation),topRight[1]+tabInset];
-  let rightBridgeEnd = [botRight[0]+(tabHeight*rightOrientation),botRight[1]-tabInset];
+  let rightBridgeStart = [topRight[0]+(htabHeight*rightOrientation),topRight[1]+htabInset];
+  let rightBridgeEnd = [botRight[0]+(htabHeight*rightOrientation),botRight[1]-htabInset];
   let botBridgeStart = [botRight[0]-tabInset,botRight[1]+(tabHeight*botOrientation)];
   let botBridgeEnd = [botLeft[0]+tabInset,botLeft[1]+(tabHeight*botOrientation)];
-  let leftBridgeStart = [botLeft[0]+(tabHeight*leftOrientation),botLeft[1]-tabInset];
-  let leftBridgeEnd = [topLeft[0]+(tabHeight*leftOrientation),topLeft[1]+tabInset];
+  let leftBridgeStart = [botLeft[0]+(htabHeight*leftOrientation),botLeft[1]-htabInset];
+  let leftBridgeEnd = [topLeft[0]+(htabHeight*leftOrientation),topLeft[1]+htabInset];
   let bridgeNudgeDist = normalize(width,5,125);
   let botRightNudgeDist = normalize(width,10,125)// + Math.ceil((125-width)/42);
   if(pieceRow != pieceCount[1]-1 && pieceCol!= pieceCount[0]-1){
@@ -257,17 +294,17 @@ function generatePieceTemplate(pieceRow,pieceCol,orientations){
     [...getLine(topLeft[0]+c2,topLeft[1],...topBridgeStart,r),...getLine(topRight[0]-c2,topRight[1],...topBridgeEnd,r),...topBridgeEnd],
     [topRight[0]-c2,topRight[1],topRight[0]-c1,topRight[1],topRight[0],topRight[1]],
 
-    [topRight[0],topRight[1]+c1,topRight[0],topRight[1]+c2,...rightBridgeStart],
-    [...getLine(topRight[0],topRight[1]+c2,...rightBridgeStart,r),...getLine(botRight[0],botRight[1]-c2,...rightBridgeEnd,r) ,...rightBridgeEnd],
-    [botRight[0],botRight[1]-c2,botRight[0],botRight[1]-c1,botRight[0],botRight[1]],
+    [topRight[0],topRight[1]+hc1,topRight[0],topRight[1]+hc2,...rightBridgeStart],
+    [...getLine(topRight[0],topRight[1]+hc2,...rightBridgeStart,r),...getLine(botRight[0],botRight[1]-hc2,...rightBridgeEnd,r) ,...rightBridgeEnd],
+    [botRight[0],botRight[1]-hc2,botRight[0],botRight[1]-hc1,botRight[0],botRight[1]],
 
     [botRight[0]-c1,botRight[1],botRight[0]-c2,botRight[1],...botBridgeStart],
     [...getLine(botRight[0]-c2,botRight[1],...botBridgeStart,r),...getLine(botLeft[0]+c2,botLeft[1],...botBridgeEnd,r),...botBridgeEnd],
     [botLeft[0]+c2,botLeft[1],botLeft[0]+c1,botLeft[1],botLeft[0],botLeft[1]],
 
-    [botLeft[0],botLeft[1]-c1,botLeft[0],botLeft[1]-c2,...leftBridgeStart],
-    [...getLine(botLeft[0],botLeft[1]-c2,...leftBridgeStart,r),...getLine(topLeft[0],topLeft[1]+c2,...leftBridgeEnd,r),...leftBridgeEnd],
-    [topLeft[0],topLeft[1]+c2,topLeft[0],topLeft[1]+c1,topLeft[0],topLeft[1]]
+    [botLeft[0],botLeft[1]-hc1,botLeft[0],botLeft[1]-hc2,...leftBridgeStart],
+    [...getLine(botLeft[0],botLeft[1]-hc2,...leftBridgeStart,r),...getLine(topLeft[0],topLeft[1]+hc2,...leftBridgeEnd,r),...leftBridgeEnd],
+    [topLeft[0],topLeft[1]+hc2,topLeft[0],topLeft[1]+hc1,topLeft[0],topLeft[1]]
   ];
   pieceData.template = masterTemplate;
   return pieceData;
@@ -316,6 +353,14 @@ function nudge(point,d){
   let ySign = (Math.random()>=0.5)? 1 : -1;
   point[0] += (x*xSign);
   point[1] += (y*ySign);
+}
+function vecAdd(a,b,s=1){
+  return [a[0]+(b[0]*s),a[1]+(b[1]*s)];
+}
+function pointDist(x1,y1,x2,y2){
+  return Math.sqrt(
+    Math.pow(y2-y1,2) + Math.pow(x2-x1,2)
+  );
 }
 class myPiece {
   constructor(skin,orientations,pieceRow,pieceCol,pieceData,id,x,y){
