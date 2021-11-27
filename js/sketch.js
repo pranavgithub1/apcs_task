@@ -3,18 +3,21 @@ let endpoint = "https://api.artic.edu/api/v1/artworks";
 let img;
 let pieces = [];
 let imageLoaded = false;
-let loadRandom = false;
+let loadRandom = true;
 let pieceGen = false;
 let pieceCount = [5,0];
 let xDims;
 let yDims;
 let prefxDims;
 let prefyDims;
-let currentlyGrabbed;
+let currentlyGrabbed = null;
 let grabbedX;
 let grabbedY;
 let piecesToDraw = [];
 let pieceMap;
+let maxDim;
+let visited = [];
+let component = [];
 function preload() {
   if(loadRandom){
     let randomPage = int(random(0,400));
@@ -40,11 +43,12 @@ function preload() {
 }
 
 function setup() {
-  createCanvas(1000, 1000);
+  createCanvas(2000, 2000);
 }
 
 function draw() {
   if(!imageLoaded) return;
+  noLoop();
   // resize image and generate piece bounds as squares
   img.resize(0,500);
   let imgWHratio = img.height / img.width;
@@ -53,9 +57,13 @@ function draw() {
   background(255);
   // generate the pieces
   pieceId = 0;
+  resetVisited(pieceCount[0]*pieceCount[1]);
   if(!pieceGen){
     xDims = partition(img.width,pieceCount[0]);
     yDims = partition(img.height,pieceCount[1]);
+    maxDim = Math.max(...xDims,...yDims) *2;
+    // maxDim*=2;
+    console.log(maxDim);
     prefxDims = [0];
     prefyDims = [0];
     for(let i = 0;i<xDims.length-1;i++){
@@ -75,7 +83,41 @@ function draw() {
         let p = generatePiece(i,j,pieceId);
         pieceId++;
         pieces[i].push(p);
+        // piecesToDraw.push(p);
+      }
+    }
+    for(let i = 0;i<pieceCount[1];i++){
+      for(let j = 0;j<pieceCount[0];j++){
+        let pieceCol = j;
+        let pieceRow = i;
+        let topLeftX = prefxDims[pieceCol];
+        let topLeftY = prefyDims[pieceRow];
+        let pieceGraphics = createGraphics(maxDim*pieceCount[0],maxDim*pieceCount[1]);
+        pieceGraphics.clear();
+        // pieceGraphics.stroke('red');
+        // pieceGraphics.strokeWeight(3);
+        // for(let i = 0;i<pieceCount[0];i++){
+        //   pieceGraphics.line(i*maxDim,0,i*maxDim,pieceGraphics.height);
+        // }
+        // for(let i = 0;i<pieceCount[1];i++){
+        //   pieceGraphics.line(0,i*maxDim,pieceGraphics.width,i*maxDim);
+        // }
+        let center = [maxDim*pieceCol + maxDim/2,maxDim*pieceRow + maxDim/2];
+        let pieceCenter = [topLeftX + pieces[i][j].data.width/2,topLeftY + pieces[i][j].data.height/2];
+        pieceGraphics.image(pieces[i][j].skin,center[0]-pieceCenter[0],center[1]-pieceCenter[1]);
+        let shift = [(center[0]-pieceCenter[0]),(center[1]-pieceCenter[1])];
+        let lightData = {};                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+        lightData.topLeft = vecAdd(pieces[i][j].data.topLeft,shift);
+        lightData.topRight = vecAdd(pieces[i][j].data.topRight,shift);
+        lightData.botRight = vecAdd(pieces[i][j].data.botRight,shift);
+        lightData.botLeft = vecAdd(pieces[i][j].data.botLeft,shift);
+        lightData.cellCenter = center;
+        lightData.pieceCenter = pieceCenter;
+        let p = new lightPiece(pieceGraphics.get(),100,100,pieces[i][j].row,pieces[i][j].col,pieces[i][j].id,lightData);
+        pieceGraphics.remove();
+        pieceGraphics = null;
         piecesToDraw.push(p);
+        
       }
     }
     pieces = null;
@@ -86,13 +128,20 @@ function draw() {
   for(piece of piecesToDraw){
     image(piece.skin,piece.x,piece.y);
   }
-  // console.log(pieceMap[0].x);
+}
+function keyPressed(){
+  if(key === 'a' && currentlyGrabbed!=null){
+    rotatePiece(currentlyGrabbed);
+  }
+  // if(key === ' '){
+  //   image(img,0,0);
+  //   redraw()
+  // }
+  return false;
 }
 function mousePressed(){
   for(let i = piecesToDraw.length-1;i>=0;i--){
-    let xpos = piecesToDraw[i].x;
-    let ypos = piecesToDraw[i].y;
-    let [r,g,b,a] = piecesToDraw[i].skin.get(mouseX-xpos,mouseY-ypos);
+    let [r,g,b,a] = piecesToDraw[i].skin.get(mouseX-piecesToDraw[i].x,mouseY-piecesToDraw[i].y);
     if(a!=0) {
       currentlyGrabbed = piecesToDraw[i];
       grabbedX = mouseX - currentlyGrabbed.x;
@@ -103,48 +152,96 @@ function mousePressed(){
     }
   }
 }
-function mouseDragged(){
-  if(currentlyGrabbed!=null){
 
+function mouseDragged(){
+  if(currentlyGrabbed!=null && currentlyGrabbed.neighbors.length!=0){
+    for(o of currentlyGrabbed.neighbors){
+      pieceMap[o].neighbors = pieceMap[o].neighbors.filter(e => e!=currentlyGrabbed.id);
+    }
+    currentlyGrabbed.neighbors = [];
+  }
+  if(currentlyGrabbed!=null){
     currentlyGrabbed.x = mouseX - grabbedX;
     currentlyGrabbed.y = mouseY - grabbedY;
+    redraw();
   }
 }
 function mouseReleased(){
   if(currentlyGrabbed===null) return;
+  let xy = [currentlyGrabbed.x,currentlyGrabbed.y];
+  let curTopLeft = vecAdd(currentlyGrabbed.data.topLeft,xy);
+  let curTopRight = vecAdd(currentlyGrabbed.data.topRight,xy);
+  let curBotLeft = vecAdd(currentlyGrabbed.data.botLeft,xy);
+  let curBotRight = vecAdd(currentlyGrabbed.data.botRight,xy);
+  let foundfit = false;
   // top fit
-  if(currentlyGrabbed.row > 0){
+  let fitSens = 12;
+  if(currentlyGrabbed.row > 0 && !currentlyGrabbed.neighbors.includes(currentlyGrabbed.id - pieceCount[0])){
     let top = pieceMap[currentlyGrabbed.id - pieceCount[0]];
-    let xy = [currentlyGrabbed.x,currentlyGrabbed.y];
-    let xyt = [top.x,top.y]
-    let curTopLeft = vecAdd(currentlyGrabbed.data.topLeft,xy);
-    let curTopRight = vecAdd(currentlyGrabbed.data.topRight,xy)
+    let xyt = [top.x,top.y];
     let topBotLeft = vecAdd(top.data.botLeft,xyt);
     let topBotRight = vecAdd(top.data.botRight,xyt)
-    if(pointDist(...curTopLeft,...topBotLeft)<5 && pointDist(...curTopRight,...topBotRight)<5){
+    if(pointDist(...curTopLeft,...topBotLeft)<fitSens && pointDist(...curTopRight,...topBotRight)<fitSens){
       [currentlyGrabbed.x,currentlyGrabbed.y] = vecAdd(topBotLeft,currentlyGrabbed.data.topLeft,-1);
+      currentlyGrabbed.neighbors.push(top.id);
+      top.neighbors.push(currentlyGrabbed.id);
+      foundfit = true;
     }
   }
   // bottom fit
-  if(currentlyGrabbed.row+1 < pieceCount[1]-1){
+  if(currentlyGrabbed.row+1 < pieceCount[1] && !currentlyGrabbed.neighbors.includes(currentlyGrabbed.id + pieceCount[0])){
     let bot = pieceMap[currentlyGrabbed.id + pieceCount[0]];
-    let xy = [currentlyGrabbed.x,currentlyGrabbed.y];
     let xyb = [bot.x,bot.y];
-    let curBotLeft = vecAdd(currentlyGrabbed.data.botLeft,xy);
-    let curBotRight = vecAdd(currentlyGrabbed.data.botRight,xy);
     let botTopLeft = vecAdd(bot.data.topLeft,xyb);
     let botTopRight = vecAdd(bot.data.topRight,xyb);
-    if(pointDist(...curBotLeft,...botTopLeft)<5 && pointDist(...curBotRight,...botTopRight)<5){
+    if(pointDist(...curBotLeft,...botTopLeft)<fitSens && pointDist(...curBotRight,...botTopRight)<fitSens){
       [currentlyGrabbed.x,currentlyGrabbed.y] = vecAdd(botTopLeft,currentlyGrabbed.data.botLeft,-1);
+      currentlyGrabbed.neighbors.push(bot.id);
+      bot.neighbors.push(currentlyGrabbed.id);
+      foundfit = true;
     }
   }
-  
+  // left fit
+  if(currentlyGrabbed.col > 0 && !currentlyGrabbed.neighbors.includes(currentlyGrabbed.id-1)){
+    let left = pieceMap[currentlyGrabbed.id-1];
+    let xyl = [left.x,left.y];
+    let leftTopRight = vecAdd(left.data.topRight,xyl);
+    let leftBotRight = vecAdd(left.data.botRight,xyl);
+    if(pointDist(...curBotLeft,...leftBotRight)<fitSens && pointDist(...curTopLeft,...leftTopRight)<fitSens){
+      [currentlyGrabbed.x,currentlyGrabbed.y] = vecAdd(leftBotRight,currentlyGrabbed.data.botLeft,-1);
+      currentlyGrabbed.neighbors.push(left.id);
+      left.neighbors.push(currentlyGrabbed.id);
+      foundfit = true;
+    }
+  }
+  // right fit
+  if(currentlyGrabbed.col+1 < pieceCount[0] && !currentlyGrabbed.neighbors.includes(currentlyGrabbed.id+1)){
+    let right = pieceMap[currentlyGrabbed.id+1];
+    let xyr = [right.x,right.y];
+    let rightBotLeft = vecAdd(right.data.botLeft,xyr);
+    let rightTopLeft = vecAdd(right.data.topLeft,xyr);
+    if(pointDist(...curBotRight,...rightBotLeft)<fitSens && pointDist(...curTopRight,...rightTopLeft)<fitSens){
+      [currentlyGrabbed.x,currentlyGrabbed.y] = vecAdd(rightTopLeft,currentlyGrabbed.data.topRight,-1);
+      currentlyGrabbed.neighbors.push(right.id);
+      right.neighbors.push(currentlyGrabbed.id);
+      foundfit = true;
+    }
+  }
+  if(foundfit){
+    redraw();
+    let cnt = countConnected(currentlyGrabbed.id);
+    resetVisited(pieceCount[0]*pieceCount[1]);
+    console.log(cnt);
+    if(cnt == pieceCount[0]*pieceCount[1]){
+      alert("congragulations on solving the puzzle");
+    }
+  }
   currentlyGrabbed = null;
   grabbedX = null;
   grabbedY = null;
 }
 function generatePiece(pieceRow,pieceCol,pieceId) {
-
+  
   let curOrientations = getRandomOrientations();
   if(pieceCol==0) curOrientations[3]=0;
   if(pieceCol==pieceCount[0]-1) curOrientations[1]=0;
@@ -162,24 +259,21 @@ function generatePiece(pieceRow,pieceCol,pieceId) {
   let pieceMask = res[0];
   let pieceData = res[1];
   tempImage.mask(pieceMask);
-  let pieceGraphics = createGraphics(img.width,img.height);
-  // pieceGraphics.clear();
-  pieceGraphics.image(tempImage,0,0);
-  pieceGraphics.noFill();
-  pieceGraphics.strokeWeight(1);
-  // let pieceBorder = generatePieceTemplate(pieceRow,pieceCol,curOrientations)[0];
+  let pieceWithBorder = createGraphics(img.width,img.height);
+  pieceWithBorder.clear();
+  pieceWithBorder.image(tempImage,0,0);
+  pieceWithBorder.noFill();
+  pieceWithBorder.strokeWeight(1);
   let pieceBorder = pieceData.template;
-  pieceGraphics.beginShape();
-  pieceGraphics.vertex(pieceData.topLeft[0],pieceData.topLeft[1]);
+  pieceWithBorder.beginShape();
+  pieceWithBorder.vertex(pieceData.topLeft[0],pieceData.topLeft[1]);
   for(arr of pieceBorder){
-    pieceGraphics.bezierVertex(...arr);
+    pieceWithBorder.bezierVertex(...arr);
   }
-  pieceGraphics.endShape();
-  pieceGraphics.stroke('red');
-  pieceGraphics.strokeWeight('4');
-  pieceGraphics.point(pieceData.topLeft[0],pieceData.topLeft[1]);
-  // let pieceElement = createImg(pieceGraphics.canvas.toDataURL(),`piece ${pieceId}`);
-  let p = new myPiece(pieceGraphics.get(),curOrientations,pieceRow,pieceCol,pieceData,pieceId,100,100);
+  pieceWithBorder.endShape();
+  let p = new myPiece(pieceWithBorder.get(),curOrientations,pieceRow,pieceCol,pieceData,pieceId,100,100);
+  pieceWithBorder.remove();
+  pieceWithBorder = null;
   return p;
 };
 
@@ -198,8 +292,10 @@ function generateMask(pieceRow,pieceCol,orientations) {
     pieceMask.bezierVertex(...arr);
   }
   pieceMask.endShape();
-
-  return [pieceMask,pieceData];
+  let res = pieceMask.get();
+  pieceMask.remove();
+  pieceMask = null;
+  return [res,pieceData];
 }
 
 function generatePieceTemplate(pieceRow,pieceCol,orientations){
@@ -362,42 +458,80 @@ function pointDist(x1,y1,x2,y2){
     Math.pow(y2-y1,2) + Math.pow(x2-x1,2)
   );
 }
+function rotatePiece(piece){
+
+  let rdim = Math.max(piece.skin.height,piece.skin.width);
+  let rotater = createGraphics(rdim*2,rdim*2);
+  rotater.clear();
+  rotater.translate(rotater.width/2,rotater.height/2);
+  rotater.rotate(Math.PI/2);
+  rotater.image(piece.skin,0,0);
+  let rotated = rotater.get();
+  rotater.remove();
+  rotater=null;
+
+  let newSkin = createGraphics(piece.skin.width,piece.skin.height);
+  newSkin.clear();
+  newSkin.imageMode(CENTER);
+  newSkin.image(rotated,piece.data.cellCenter[0]+piece.data.cellCenter[1],piece.data.cellCenter[1]-piece.data.cellCenter[0]);
+  let newskin = newSkin.get();
+  newSkin.remove();
+  newSkin=null;
+  piece.data.topLeft = rotate90ccw(piece.data.topLeft,piece.data.cellCenter);
+  piece.data.topRight = rotate90ccw(piece.data.topRight,piece.data.cellCenter);
+  piece.data.botLeft = rotate90ccw(piece.data.botLeft,piece.data.cellCenter);
+  piece.data.botRight = rotate90ccw(piece.data.botRight,piece.data.cellCenter);
+  piece.skin = newskin;
+  redraw();
+}
+function rotate90ccw(point,origin){
+  let xDist = point[0] - origin[0];
+  let yDist = point[1] - origin[1];
+  return vecAdd(origin,[-yDist,xDist])
+}
 class myPiece {
   constructor(skin,orientations,pieceRow,pieceCol,pieceData,id,x,y){
     this.skin = skin;
-    // this.skin.mousePressed()
     this.orientations = orientations;
     this.row = pieceRow;
     this.col = pieceCol;
     this.data = pieceData;
     this.id = id;
-    this.grabbed = false;
     this.x = x;
     this.y = y;
-    // this.width = xDims[pieceCol];
-    // this.height = yDims[pieceRow];
-    // this.x = prefxDims[pieceCol];
-    // this.y = prefyDims[pieceRow];
-
-    // this.topLeft = [this.x,this.y];
-    // this.topRight = [this.x+this.width,this.y];
-    // this.botRight = [this.x+this.width,this.y+this.height];
-    // this.botLeft = [this.x,this.y+this.height];
-
-    // this.topOrientation = this.orientations[0] * -1;
-    // this.rightOrientation = this.orientations[1];
-    // this.botOrientation = this.orientations[2];
-    // this.leftOrientation = this.orientations[3] * -1;
-
-    // this.topBridgeStart = [this.topLeft[0]+(tabInset),this.topLeft[1]+(tabHeight*this.topOrientation)];
-    // this.topBridgeEnd = [this.topRight[0]-(tabInset),this.topRight[1]+(tabHeight*this.topOrientation)];
-    // this.rightBridgeStart = [this.topRight[0]+(tabHeight*this.rightOrientation),this.topRight[1]+tabInset];
-    // this.rightBridgeEnd = [this.botRight[0]+(tabHeight*this.rightOrientation),this.botRight[1]-tabInset];
-    // this.botBridgeStart = [this.botRight[0]-tabInset,this.botRight[1]+(tabHeight*this.botOrientation)];
-    // this.botBridgeEnd = [this.botLeft[0]+tabInset,this.botLeft[1]+(tabHeight*this.botOrientation)];
-    // this.leftBridgeStart = [this.botLeft[0]+(tabHeight*this.leftOrientation),this.botLeft[1]-tabInset];
-    // this.leftBridgeEnd = [this.topLeft[0]+(tabHeight*this.leftOrientation),this.topLeft[1]+tabInset];
   }
 }
-
-
+class lightPiece {
+  constructor(skin,x,y,row,col,id,data){
+    this.skin = skin;
+    this.x = x;
+    this.y = y;
+    this.row = row;
+    this.col = col;
+    this.id = id;
+    this.data = data;
+    this.neighbors = [];
+  }
+}
+function resetVisited(n){
+  visited = [];
+  for(let i = 0;i<n;i++){
+    visited.push(false);
+  }
+}
+function countConnected(s){
+  let cnt = 1;
+  visited[s]=true;
+  for(o of pieceMap[s].neighbors){
+    if(!visited[o]){
+      cnt += countConnected(o);
+    }
+  }
+  return cnt;
+}
+function getComponent(s){
+  component.push(s);
+  for(o of pieceMap[s].neighbors){
+    getComponent(o);
+  }
+}
