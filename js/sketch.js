@@ -18,6 +18,8 @@ let pieceMap;
 let maxDim;
 let visited = [];
 let component = [];
+let showingImage = false;
+let referenceImage;
 function preload() {
   if(loadRandom){
     let randomPage = int(random(0,400));
@@ -43,22 +45,24 @@ function preload() {
 }
 
 function setup() {
-  createCanvas(2000, 2000);
+  createCanvas(document.documentElement.clientWidth*0.9, document.documentElement.clientHeight*0.9);
+  // console.log(window)
 }
 
 function draw() {
   if(!imageLoaded) return;
-  noLoop();
-  // resize image and generate piece bounds as squares
-  img.resize(0,500);
-  let imgWHratio = img.height / img.width;
-  // pieceCount[0] = Math.floor(img.width/100);
-  pieceCount[1] = Math.ceil(pieceCount[0] * imgWHratio);
-  background(255);
-  // generate the pieces
-  pieceId = 0;
-  resetVisited(pieceCount[0]*pieceCount[1]);
   if(!pieceGen){
+    // resize image and generate piece bounds as squares
+    img.resize(0,height*0.5);
+    let imgWHratio = img.height / img.width;
+    // pieceCount[0] = Math.floor(img.width/100);
+    pieceCount[1] = Math.ceil(pieceCount[0] * imgWHratio);
+    // generate the pieces
+    pieceId = 0;
+    resetVisited(pieceCount[0]*pieceCount[1]);
+    referenceImage = createImg(img.canvas.toDataURL(),'referenceImage').hide();
+
+    referenceImage.position(0,0);
     xDims = partition(img.width,pieceCount[0]);
     yDims = partition(img.height,pieceCount[1]);
     maxDim = Math.max(...xDims,...yDims) *2;
@@ -94,14 +98,6 @@ function draw() {
         let topLeftY = prefyDims[pieceRow];
         let pieceGraphics = createGraphics(maxDim*pieceCount[0],maxDim*pieceCount[1]);
         pieceGraphics.clear();
-        // pieceGraphics.stroke('red');
-        // pieceGraphics.strokeWeight(3);
-        // for(let i = 0;i<pieceCount[0];i++){
-        //   pieceGraphics.line(i*maxDim,0,i*maxDim,pieceGraphics.height);
-        // }
-        // for(let i = 0;i<pieceCount[1];i++){
-        //   pieceGraphics.line(0,i*maxDim,pieceGraphics.width,i*maxDim);
-        // }
         let center = [maxDim*pieceCol + maxDim/2,maxDim*pieceRow + maxDim/2];
         let pieceCenter = [topLeftX + pieces[i][j].data.width/2,topLeftY + pieces[i][j].data.height/2];
         pieceGraphics.image(pieces[i][j].skin,center[0]-pieceCenter[0],center[1]-pieceCenter[1]);
@@ -113,7 +109,16 @@ function draw() {
         lightData.botLeft = vecAdd(pieces[i][j].data.botLeft,shift);
         lightData.cellCenter = center;
         lightData.pieceCenter = pieceCenter;
-        let p = new lightPiece(pieceGraphics.get(),100,100,pieces[i][j].row,pieces[i][j].col,pieces[i][j].id,lightData);
+        
+        let pos = getRandomPosition(0,width-maxDim,0,height-maxDim);
+        let p = new lightPiece(pieceGraphics.get(),pieces[i][j].skinNoBorder,0,-50,pieces[i][j].row,pieces[i][j].col,pieces[i][j].id,lightData);
+        console.log(pos);
+        p.x = pos[0] - p.data.topLeft[0];
+        p.y = pos[1] - p.data.topLeft[1];
+        let rotations = Math.floor(Math.random()*4);
+        for(let i = 0;i<rotations;i++){
+          rotatePiece(p);
+        }
         pieceGraphics.remove();
         pieceGraphics = null;
         piecesToDraw.push(p);
@@ -124,7 +129,8 @@ function draw() {
     pieceMap = piecesToDraw.slice();
     pieceGen=true;
   }
-
+  noLoop();
+  background(255);
   for(piece of piecesToDraw){
     image(piece.skin,piece.x,piece.y);
   }
@@ -133,10 +139,18 @@ function keyPressed(){
   if(key === 'a' && currentlyGrabbed!=null){
     rotatePiece(currentlyGrabbed);
   }
-  // if(key === ' '){
-  //   image(img,0,0);
-  //   redraw()
-  // }
+  if(key === ' '){
+    if(showingImage){
+      referenceImage.hide();
+      showingImage = false;
+    }
+    else {
+      referenceImage.show();
+      showingImage = true;
+    }
+  }
+  console.log(showingImage);
+  // redraw();
   return false;
 }
 function mousePressed(){
@@ -233,6 +247,9 @@ function mouseReleased(){
     resetVisited(pieceCount[0]*pieceCount[1]);
     console.log(cnt);
     if(cnt == pieceCount[0]*pieceCount[1]){
+      // for(piece of piecesToDraw){
+      //   piece.skin = piece.skinNoBorder;
+      // }
       alert("congragulations on solving the puzzle");
     }
   }
@@ -271,7 +288,7 @@ function generatePiece(pieceRow,pieceCol,pieceId) {
     pieceWithBorder.bezierVertex(...arr);
   }
   pieceWithBorder.endShape();
-  let p = new myPiece(pieceWithBorder.get(),curOrientations,pieceRow,pieceCol,pieceData,pieceId,100,100);
+  let p = new myPiece(pieceWithBorder.get(),tempImage,curOrientations,pieceRow,pieceCol,pieceData,pieceId,100,100);
   pieceWithBorder.remove();
   pieceWithBorder = null;
   return p;
@@ -490,8 +507,9 @@ function rotate90ccw(point,origin){
   return vecAdd(origin,[-yDist,xDist])
 }
 class myPiece {
-  constructor(skin,orientations,pieceRow,pieceCol,pieceData,id,x,y){
+  constructor(skin,skinNoBorder,orientations,pieceRow,pieceCol,pieceData,id,x,y){
     this.skin = skin;
+    this.skinNoBorder = skinNoBorder;
     this.orientations = orientations;
     this.row = pieceRow;
     this.col = pieceCol;
@@ -502,8 +520,9 @@ class myPiece {
   }
 }
 class lightPiece {
-  constructor(skin,x,y,row,col,id,data){
+  constructor(skin,skinNoBorder,x,y,row,col,id,data){
     this.skin = skin;
+    this.skinNoBorder = skinNoBorder;
     this.x = x;
     this.y = y;
     this.row = row;
@@ -534,4 +553,9 @@ function getComponent(s){
   for(o of pieceMap[s].neighbors){
     getComponent(o);
   }
+}
+function getRandomPosition(xmin=0,xmax,ymin=0,ymax){
+  let x = Math.floor(Math.random() * (xmax-xmin+1)) + xmin;
+  let y = Math.floor(Math.random() * (ymax-ymin+1)) + ymin;
+  return [x,y];
 }
