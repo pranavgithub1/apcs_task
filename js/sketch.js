@@ -1,4 +1,5 @@
 let data;
+let artData;
 let endpoint = "https://api.artic.edu/api/v1/artworks";
 let img;
 let pieces = [];
@@ -20,14 +21,24 @@ let visited = [];
 let component = [];
 let showingImage = false;
 let referenceImage;
+let started = false;
+let textFadeCounter = 0;
+let fade = 2;
 function preload() {
   if(loadRandom){
     let randomPage = int(random(0,400));
     let url = endpoint+`?page=${randomPage}`;
     httpGet(url,'json',false,function(response){
+      console.log(response);
       data = response;
       let randomIndex = int(random(0,12));
       let image_id = data.data[randomIndex].image_id;
+      artData = data.data[randomIndex];
+      console.log(image_id);
+      if(image_id===null) {
+        imageLoaded = true;
+        return;
+      }
       let imageURL = `https://www.artic.edu/iiif/2/${image_id}/full/843,/0/default.jpg`;
       console.log(imageURL);
       loadImage(imageURL,function(i){
@@ -46,14 +57,27 @@ function preload() {
 
 function setup() {
   createCanvas(document.documentElement.clientWidth*0.9, document.documentElement.clientHeight*0.9);
+  background(255);
   // console.log(window)
 }
 
 function draw() {
-  if(!imageLoaded) return;
+  if(!imageLoaded) {
+    text('Loading...',width/2,height/2);
+    return;
+  }
+  // 303
+  if(img==null){
+    background(255);
+    text('Image fetch failed, please reload',width/2,height/2);
+    return;
+  }
+
   if(!pieceGen){
+    background(255);
+    text('Generating Puzzle...',width/2,height/2);
     // resize image and generate piece bounds as squares
-    img.resize(0,height*0.5);
+    img.resize(0,height*0.75);
     let imgWHratio = img.height / img.width;
     // pieceCount[0] = Math.floor(img.width/100);
     pieceCount[1] = Math.ceil(pieceCount[0] * imgWHratio);
@@ -67,7 +91,7 @@ function draw() {
     yDims = partition(img.height,pieceCount[1]);
     maxDim = Math.max(...xDims,...yDims) *2;
     // maxDim*=2;
-    console.log(maxDim);
+    // console.log(maxDim);
     prefxDims = [0];
     prefyDims = [0];
     for(let i = 0;i<xDims.length-1;i++){
@@ -76,11 +100,11 @@ function draw() {
     for(let i = 0;i<yDims.length-1;i++){
       prefyDims.push(prefyDims[i] + yDims[i]);
     }
-    console.log(img.width,img.height)
-    console.log(xDims);
-    console.log(yDims);
-    console.log(prefxDims);
-    console.log(prefyDims);
+    // console.log(img.width,img.height)
+    // console.log(xDims);
+    // console.log(yDims);
+    // console.log(prefxDims);
+    // console.log(prefyDims);
     for(let i = 0;i<pieceCount[1];i++){
       pieces.push([]);
       for(let j = 0;j<pieceCount[0];j++){
@@ -112,7 +136,7 @@ function draw() {
         
         let pos = getRandomPosition(0,width-maxDim,0,height-maxDim);
         let p = new lightPiece(pieceGraphics.get(),pieces[i][j].skinNoBorder,0,-50,pieces[i][j].row,pieces[i][j].col,pieces[i][j].id,lightData);
-        console.log(pos);
+        // console.log(pos);
         p.x = pos[0] - p.data.topLeft[0];
         p.y = pos[1] - p.data.topLeft[1];
         let rotations = Math.floor(Math.random()*4);
@@ -128,6 +152,32 @@ function draw() {
     pieces = null;
     pieceMap = piecesToDraw.slice();
     pieceGen=true;
+  }
+  if(!started){
+    background(255);
+    image(img,0,0);
+    textSize(32);
+    fill('black');
+    // stroke('white');
+    // text('Jigsaw Puzzle',0,img.height+50)
+    textSize(18);
+    let artTitle = "Unknown title";
+    let artist = "Unkown artist";
+    let artDate = "unknown date"
+    if(artData.title != null) artTitle = artData.title;
+    if(artData.artist_title != null) artist = artData.artist_title;
+    if(artData.date_start != null) artDate = artData.date_start;
+    text(artTitle,0,img.height+50)
+    textSize(16);
+    text(artist+" - "+artDate,0,img.height+100);
+    textFadeCounter+=fade;
+    if(textFadeCounter === 150 || textFadeCounter === 0) fade = -fade;
+    fill(0,0,0,textFadeCounter);
+    push();
+    textStyle(BOLD);
+    text('Press enter to start',width/2,height/2);
+    pop();
+    return;
   }
   noLoop();
   background(255);
@@ -149,8 +199,9 @@ function keyPressed(){
       showingImage = true;
     }
   }
-  console.log(showingImage);
-  // redraw();
+  if(keyCode===ENTER){
+    started = true;
+  }
   return false;
 }
 function mousePressed(){
@@ -245,7 +296,7 @@ function mouseReleased(){
     redraw();
     let cnt = countConnected(currentlyGrabbed.id);
     resetVisited(pieceCount[0]*pieceCount[1]);
-    console.log(cnt);
+    // console.log(cnt);
     if(cnt == pieceCount[0]*pieceCount[1]){
       // for(piece of piecesToDraw){
       //   piece.skin = piece.skinNoBorder;
@@ -333,7 +384,7 @@ function generatePieceTemplate(pieceRow,pieceCol,orientations){
   let botRight = [topLeftX+width,topLeftY+height];
   let botLeft = [topLeftX,topLeftY+height];
   let tabHeight = normalize(width,20);//-Math.floor((100-width)/10);
-    console.log(tabHeight);
+  // console.log(tabHeight);
   let tabInset = normalize(width,40);
   let c1 = normalize(width,20);
   let c2 = normalize(width,50);
