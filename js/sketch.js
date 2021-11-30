@@ -166,8 +166,17 @@ function draw() {
     let artDate = "unknown date"
     if(artData.title != null) artTitle = artData.title;
     if(artData.artist_title != null) artist = artData.artist_title;
-    if(artData.date_start != null) artDate = artData.date_start;
+    if(artData.date_start != null) {
+      artDate = artData.date_start;
+      if(artDate<0){
+        artDate = -artDate;
+        artDate  = `${artDate} BC`;
+      }
+    }
+    push();
+    textStyle(BOLD);
     text(artTitle,0,img.height+50)
+    pop();
     textSize(16);
     text(artist+" - "+artDate,0,img.height+100);
     textFadeCounter+=fade;
