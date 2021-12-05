@@ -179,6 +179,8 @@ function draw() {
     pop();
     textSize(16);
     text(artist+" - "+artDate,0,img.height+100);
+    let controls = "Controls:\nDrag pieces around with the mouse\nspace - see reference image\na - rotate piece";
+    text(controls,width-300,100);
     textFadeCounter+=fade;
     if(textFadeCounter === 150 || textFadeCounter === 0) fade = -fade;
     fill(0,0,0,textFadeCounter);
