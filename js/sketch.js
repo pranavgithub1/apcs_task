@@ -1,29 +1,3 @@
-let data;
-let artData;
-let endpoint = "https://api.artic.edu/api/v1/artworks";
-let img;
-let pieces = [];
-let imageLoaded = false;
-let loadRandom = true;
-let pieceGen = false;
-let pieceCount = [5,0];
-let xDims;
-let yDims;
-let prefxDims;
-let prefyDims;
-let currentlyGrabbed = null;
-let grabbedX;
-let grabbedY;
-let piecesToDraw = [];
-let pieceMap;
-let maxDim;
-let visited = [];
-let component = [];
-let showingImage = false;
-let referenceImage;
-let started = false;
-let textFadeCounter = 0;
-let fade = 2;
 function preload() {
   if(loadRandom){
     let randomPage = int(random(0,400));
@@ -48,9 +22,12 @@ function preload() {
     });
   }
   else {
-    img = loadImage('https://www.artic.edu/iiif/2/4636c76d-8ff1-6f00-b409-e10438d1320b/full/843,/0/default.jpg');
+    loadImage('https://www.artic.edu/iiif/2/4636c76d-8ff1-6f00-b409-e10438d1320b/full/843,/0/default.jpg',function(i){
+      img = i;
+      imageLoaded=true;
+    });
     // img = loadImage('https://www.artic.edu/iiif/2/4a87e43e-8777-d36f-126d-545286eb9c4f/full/843,/0/default.jpg');
-    imageLoaded = true;
+    // imageLoaded = true;
   }
   
 }
@@ -134,14 +111,16 @@ function draw() {
         lightData.cellCenter = center;
         lightData.pieceCenter = pieceCenter;
         
-        let pos = getRandomPosition(0,width-maxDim,0,height-maxDim);
         let p = new lightPiece(pieceGraphics.get(),pieces[i][j].skinNoBorder,0,-50,pieces[i][j].row,pieces[i][j].col,pieces[i][j].id,lightData);
         // console.log(pos);
-        p.x = pos[0] - p.data.topLeft[0];
-        p.y = pos[1] - p.data.topLeft[1];
-        let rotations = Math.floor(Math.random()*4);
-        for(let i = 0;i<rotations;i++){
-          rotatePiece(p);
+        if(loadRandom){
+          let pos = getRandomPosition(0,width-maxDim,0,height-maxDim);
+          p.x = pos[0] - p.data.topLeft[0];
+          p.y = pos[1] - p.data.topLeft[1];
+          let rotations = Math.floor(Math.random()*4);
+          for(let i = 0;i<rotations;i++){
+            rotatePiece(p);
+          }
         }
         pieceGraphics.remove();
         pieceGraphics = null;
@@ -153,7 +132,7 @@ function draw() {
     pieceMap = piecesToDraw.slice();
     pieceGen=true;
   }
-  if(!started){
+  if(!started && loadRandom){
     background(255);
     image(img,0,0);
     textSize(32);
@@ -244,6 +223,7 @@ function mouseDragged(){
 }
 function mouseReleased(){
   if(currentlyGrabbed===null) return;
+  console.log(currentlyGrabbed.neighbors)
   let xy = [currentlyGrabbed.x,currentlyGrabbed.y];
   let curTopLeft = vecAdd(currentlyGrabbed.data.topLeft,xy);
   let curTopRight = vecAdd(currentlyGrabbed.data.topRight,xy);
@@ -318,306 +298,4 @@ function mouseReleased(){
   currentlyGrabbed = null;
   grabbedX = null;
   grabbedY = null;
-}
-function generatePiece(pieceRow,pieceCol,pieceId) {
-  
-  let curOrientations = getRandomOrientations();
-  if(pieceCol==0) curOrientations[3]=0;
-  if(pieceCol==pieceCount[0]-1) curOrientations[1]=0;
-  if(pieceRow==0) curOrientations[0]=0;
-  if(pieceRow==pieceCount[1]-1) curOrientations[2]=0;
-  if(pieceRow>0){
-    curOrientations[0] = pieces[pieceRow-1][pieceCol].orientations[2] * -1;
-  }
-  if(pieceCol>0){
-    curOrientations[3] = pieces[pieceRow][pieceCol-1].orientations[1] * -1;
-  }
-  // generate the piece
-  let tempImage = img.get();
-  let res = generateMask(pieceRow,pieceCol,curOrientations);
-  let pieceMask = res[0];
-  let pieceData = res[1];
-  tempImage.mask(pieceMask);
-  let pieceWithBorder = createGraphics(img.width,img.height);
-  pieceWithBorder.clear();
-  pieceWithBorder.image(tempImage,0,0);
-  pieceWithBorder.noFill();
-  pieceWithBorder.strokeWeight(1);
-  let pieceBorder = pieceData.template;
-  pieceWithBorder.beginShape();
-  pieceWithBorder.vertex(pieceData.topLeft[0],pieceData.topLeft[1]);
-  for(arr of pieceBorder){
-    pieceWithBorder.bezierVertex(...arr);
-  }
-  pieceWithBorder.endShape();
-  let p = new myPiece(pieceWithBorder.get(),tempImage,curOrientations,pieceRow,pieceCol,pieceData,pieceId,100,100);
-  pieceWithBorder.remove();
-  pieceWithBorder = null;
-  return p;
-};
-
-function generateMask(pieceRow,pieceCol,orientations) {
-  // let pieceX = prefxDims[pieceCol];
-  // let pieceY = prefyDims[pieceRow];
-  let pieceMask = createGraphics(img.width,img.height);
-  pieceMask.clear();
-  // pieceMask.background('rgba(0, 0, 0, 0');
-  pieceMask.fill('rgba(0, 0, 0, 1)');
-  let pieceData = generatePieceTemplate(pieceRow,pieceCol,orientations);
-  let template = pieceData.template;
-  pieceMask.beginShape();
-  pieceMask.vertex(pieceData.topLeft[0],pieceData.topLeft[1]);
-  for(arr of template){
-    pieceMask.bezierVertex(...arr);
-  }
-  pieceMask.endShape();
-  let res = pieceMask.get();
-  pieceMask.remove();
-  pieceMask = null;
-  return [res,pieceData];
-}
-
-function generatePieceTemplate(pieceRow,pieceCol,orientations){
-
-  let width = xDims[pieceCol];
-  let height = yDims[pieceRow];
-  let topLeftX = prefxDims[pieceCol];
-  let topLeftY = prefyDims[pieceRow];
-
-  let topOrientation = orientations[0] * -1;
-  let rightOrientation = orientations[1];
-  let botOrientation = orientations[2];
-  let leftOrientation = orientations[3] * -1;
-
-
-  let topLeft = [topLeftX,topLeftY];
-  let topRight = [topLeftX+width,topLeftY];
-  let botRight = [topLeftX+width,topLeftY+height];
-  let botLeft = [topLeftX,topLeftY+height];
-  let tabHeight = normalize(width,20);//-Math.floor((100-width)/10);
-  // console.log(tabHeight);
-  let tabInset = normalize(width,40);
-  let c1 = normalize(width,20);
-  let c2 = normalize(width,50);
-  let htabHeight = normalize(height,20);
-  let htabInset = normalize(height,40);
-  let hc1 = normalize(height,20);
-  let hc2 = normalize(height,50);
-  let r = 1.5;
-  let topBridgeStart = [topLeft[0]+(tabInset),topLeft[1]+(tabHeight*topOrientation)];
-  let topBridgeEnd = [topRight[0]-(tabInset),topRight[1]+(tabHeight*topOrientation)];
-  let rightBridgeStart = [topRight[0]+(htabHeight*rightOrientation),topRight[1]+htabInset];
-  let rightBridgeEnd = [botRight[0]+(htabHeight*rightOrientation),botRight[1]-htabInset];
-  let botBridgeStart = [botRight[0]-tabInset,botRight[1]+(tabHeight*botOrientation)];
-  let botBridgeEnd = [botLeft[0]+tabInset,botLeft[1]+(tabHeight*botOrientation)];
-  let leftBridgeStart = [botLeft[0]+(htabHeight*leftOrientation),botLeft[1]-htabInset];
-  let leftBridgeEnd = [topLeft[0]+(htabHeight*leftOrientation),topLeft[1]+htabInset];
-  let bridgeNudgeDist = normalize(width,5,125);
-  let botRightNudgeDist = normalize(width,10,125)// + Math.ceil((125-width)/42);
-  if(pieceRow != pieceCount[1]-1 && pieceCol!= pieceCount[0]-1){
-    nudge(botRight,botRightNudgeDist);
-  }
-  if(pieceRow!=pieceCount[1]-1){
-    nudge(botBridgeStart,bridgeNudgeDist);
-    nudge(botBridgeEnd,bridgeNudgeDist);
-  }
-  if(pieceCol!=pieceCount[0]-1){
-    nudge(rightBridgeStart,bridgeNudgeDist);
-    nudge(rightBridgeEnd,bridgeNudgeDist);
-  }
-  if(pieceRow > 0){
-    topLeft = pieces[pieceRow-1][pieceCol].data.botLeft;
-    topBridgeStart = pieces[pieceRow-1][pieceCol].data.botBridgeEnd;
-    topBridgeEnd = pieces[pieceRow-1][pieceCol].data.botBridgeStart;
-    topRight = pieces[pieceRow-1][pieceCol].data.botRight;
-  }
-  if(pieceCol > 0){
-    botLeft = pieces[pieceRow][pieceCol-1].data.botRight;
-    leftBridgeStart = pieces[pieceRow][pieceCol-1].data.rightBridgeEnd;
-    leftBridgeEnd = pieces[pieceRow][pieceCol-1].data.rightBridgeStart;
-    topLeft = pieces[pieceRow][pieceCol-1].data.topRight;
-
-  }
-  let pieceData = {
-    width: width,
-    height: height,
-    topLeft: topLeft,
-    topRight: topRight,
-    botLeft: botLeft,
-    botRight: botRight,
-    topOrientation: topOrientation,
-    rightOrientation: rightOrientation,
-    botOrientation: botOrientation,
-    leftOrientation: leftOrientation,
-    tabInset: tabInset,
-    tabHeight: tabHeight,
-    c1: c1,
-    c2: c2,
-    r: r,
-    topBridgeStart: topBridgeStart,
-    topBridgeEnd: topBridgeEnd,
-    rightBridgeStart: rightBridgeStart,
-    rightBridgeEnd: rightBridgeEnd,
-    botBridgeStart: botBridgeStart,
-    botBridgeEnd: botBridgeEnd,
-    leftBridgeStart: leftBridgeStart,
-    leftBridgeEnd: leftBridgeEnd,
-    // template: [],
-  }
-  let masterTemplate = [
-    [topLeft[0]+c1,topLeft[1],topLeft[0]+c2,topLeft[1],...topBridgeStart],
-    [...getLine(topLeft[0]+c2,topLeft[1],...topBridgeStart,r),...getLine(topRight[0]-c2,topRight[1],...topBridgeEnd,r),...topBridgeEnd],
-    [topRight[0]-c2,topRight[1],topRight[0]-c1,topRight[1],topRight[0],topRight[1]],
-
-    [topRight[0],topRight[1]+hc1,topRight[0],topRight[1]+hc2,...rightBridgeStart],
-    [...getLine(topRight[0],topRight[1]+hc2,...rightBridgeStart,r),...getLine(botRight[0],botRight[1]-hc2,...rightBridgeEnd,r) ,...rightBridgeEnd],
-    [botRight[0],botRight[1]-hc2,botRight[0],botRight[1]-hc1,botRight[0],botRight[1]],
-
-    [botRight[0]-c1,botRight[1],botRight[0]-c2,botRight[1],...botBridgeStart],
-    [...getLine(botRight[0]-c2,botRight[1],...botBridgeStart,r),...getLine(botLeft[0]+c2,botLeft[1],...botBridgeEnd,r),...botBridgeEnd],
-    [botLeft[0]+c2,botLeft[1],botLeft[0]+c1,botLeft[1],botLeft[0],botLeft[1]],
-
-    [botLeft[0],botLeft[1]-hc1,botLeft[0],botLeft[1]-hc2,...leftBridgeStart],
-    [...getLine(botLeft[0],botLeft[1]-hc2,...leftBridgeStart,r),...getLine(topLeft[0],topLeft[1]+hc2,...leftBridgeEnd,r),...leftBridgeEnd],
-    [topLeft[0],topLeft[1]+hc2,topLeft[0],topLeft[1]+hc1,topLeft[0],topLeft[1]]
-  ];
-  pieceData.template = masterTemplate;
-  return pieceData;
-}
-function getLine(x1,y1,x2,y2,r){
-  return [x2 + Math.floor((x2-x1)/r),y2 + Math.floor((y2-y1)/r)];
-}
-
-function partition(n,p){
-  // parition some number n into p most equal parts
-  let base = Math.floor(n/p);
-  let remainder = n % base;
-  let add = Math.ceil(remainder/p);
-  let res = [];
-  for(let i = 0;i<p;i++){
-    let x = base;
-    if(remainder-add>=0) {
-      remainder-=add;
-      x+=add;
-    }
-    else {
-      x+=remainder;
-      remainder = 0;
-    }
-    res.push(x);
-  }
-  return res;
-}
-
-function normalize(dim,parameter,to=100){
-  return Math.ceil((parameter/to)*dim);
-}
-function getRandomOrientations(){
-  let res = []
-  for(let i = 0;i<4;i++){
-    let r = Math.random();
-    if(r>=0.5) res.push(1);
-    else res.push(-1);
-  }
-  return res;
-}
-function nudge(point,d){
-  let x = Math.floor(Math.random() * d);
-  let y = Math.floor(Math.random() * d);
-  let xSign = (Math.random()>=0.5)? 1 : -1;
-  let ySign = (Math.random()>=0.5)? 1 : -1;
-  point[0] += (x*xSign);
-  point[1] += (y*ySign);
-}
-function vecAdd(a,b,s=1){
-  return [a[0]+(b[0]*s),a[1]+(b[1]*s)];
-}
-function pointDist(x1,y1,x2,y2){
-  return Math.sqrt(
-    Math.pow(y2-y1,2) + Math.pow(x2-x1,2)
-  );
-}
-function rotatePiece(piece){
-
-  let rdim = Math.max(piece.skin.height,piece.skin.width);
-  let rotater = createGraphics(rdim*2,rdim*2);
-  rotater.clear();
-  rotater.translate(rotater.width/2,rotater.height/2);
-  rotater.rotate(Math.PI/2);
-  rotater.image(piece.skin,0,0);
-  let rotated = rotater.get();
-  rotater.remove();
-  rotater=null;
-
-  let newSkin = createGraphics(piece.skin.width,piece.skin.height);
-  newSkin.clear();
-  newSkin.imageMode(CENTER);
-  newSkin.image(rotated,piece.data.cellCenter[0]+piece.data.cellCenter[1],piece.data.cellCenter[1]-piece.data.cellCenter[0]);
-  let newskin = newSkin.get();
-  newSkin.remove();
-  newSkin=null;
-  piece.data.topLeft = rotate90ccw(piece.data.topLeft,piece.data.cellCenter);
-  piece.data.topRight = rotate90ccw(piece.data.topRight,piece.data.cellCenter);
-  piece.data.botLeft = rotate90ccw(piece.data.botLeft,piece.data.cellCenter);
-  piece.data.botRight = rotate90ccw(piece.data.botRight,piece.data.cellCenter);
-  piece.skin = newskin;
-  redraw();
-}
-function rotate90ccw(point,origin){
-  let xDist = point[0] - origin[0];
-  let yDist = point[1] - origin[1];
-  return vecAdd(origin,[-yDist,xDist])
-}
-class myPiece {
-  constructor(skin,skinNoBorder,orientations,pieceRow,pieceCol,pieceData,id,x,y){
-    this.skin = skin;
-    this.skinNoBorder = skinNoBorder;
-    this.orientations = orientations;
-    this.row = pieceRow;
-    this.col = pieceCol;
-    this.data = pieceData;
-    this.id = id;
-    this.x = x;
-    this.y = y;
-  }
-}
-class lightPiece {
-  constructor(skin,skinNoBorder,x,y,row,col,id,data){
-    this.skin = skin;
-    this.skinNoBorder = skinNoBorder;
-    this.x = x;
-    this.y = y;
-    this.row = row;
-    this.col = col;
-    this.id = id;
-    this.data = data;
-    this.neighbors = [];
-  }
-}
-function resetVisited(n){
-  visited = [];
-  for(let i = 0;i<n;i++){
-    visited.push(false);
-  }
-}
-function countConnected(s){
-  let cnt = 1;
-  visited[s]=true;
-  for(o of pieceMap[s].neighbors){
-    if(!visited[o]){
-      cnt += countConnected(o);
-    }
-  }
-  return cnt;
-}
-function getComponent(s){
-  component.push(s);
-  for(o of pieceMap[s].neighbors){
-    getComponent(o);
-  }
-}
-function getRandomPosition(xmin=0,xmax,ymin=0,ymax){
-  let x = Math.floor(Math.random() * (xmax-xmin+1)) + xmin;
-  let y = Math.floor(Math.random() * (ymax-ymin+1)) + ymin;
-  return [x,y];
 }
