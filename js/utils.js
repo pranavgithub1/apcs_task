@@ -52,7 +52,7 @@ function getLine(x1,y1,x2,y2,r){
       Math.pow(y2-y1,2) + Math.pow(x2-x1,2)
     );
   }
-  function rotatePiece(piece){
+  function rotatePiece(piece,origin){
   
     let rdim = Math.max(piece.skin.height,piece.skin.width);
     let rotater = createGraphics(rdim*2,rdim*2);
@@ -76,6 +76,8 @@ function getLine(x1,y1,x2,y2,r){
     piece.data.botLeft = rotate90ccw(piece.data.botLeft,piece.data.cellCenter);
     piece.data.botRight = rotate90ccw(piece.data.botRight,piece.data.cellCenter);
     piece.skin = newskin;
+
+    // [piece.x,piece.y] = rotate90ccw([piece.x,piece.y],origin);
     redraw();
   }
   function rotate90ccw(point,origin){
@@ -107,6 +109,9 @@ function getLine(x1,y1,x2,y2,r){
       this.id = id;
       this.data = data;
       this.neighbors = [];
+      this.grabbed = false;
+      this.originalGrabbedX;
+      this.originalGrabbedY;
     }
   }
   function resetVisited(n){
@@ -135,4 +140,9 @@ function getLine(x1,y1,x2,y2,r){
     let x = Math.floor(Math.random() * (xmax-xmin+1)) + xmin;
     let y = Math.floor(Math.random() * (ymax-ymin+1)) + ymin;
     return [x,y];
+  }
+
+  function followPosition(tile,x_init,y_init,x_final,y_final){
+    tile.x += x_final - x_init;
+    tile.y += y_final - y_init;
   }

@@ -177,7 +177,11 @@ function draw() {
 }
 function keyPressed(){
   if(key === 'a' && currentlyGrabbed!=null){
-    rotatePiece(currentlyGrabbed);
+    let origin = [currentlyGrabbed.x,currentlyGrabbed.y]
+    rotatePiece(currentlyGrabbed,origin);
+    for(o of currentlyGrabbed.neighbors){
+      rotatePiece(pieceMap[o],origin);
+    }
   }
   if(key === ' '){
     if(showingImage){
@@ -194,108 +198,344 @@ function keyPressed(){
   }
   return false;
 }
+// let originalGrabbedX,originalGrabbedY;
+let origMouseX,origMouseY;
 function mousePressed(){
   for(let i = piecesToDraw.length-1;i>=0;i--){
     let [r,g,b,a] = piecesToDraw[i].skin.get(mouseX-piecesToDraw[i].x,mouseY-piecesToDraw[i].y);
     if(a!=0) {
       currentlyGrabbed = piecesToDraw[i];
-      grabbedX = mouseX - currentlyGrabbed.x;
-      grabbedY = mouseY - currentlyGrabbed.y;
+      // grabbedX = mouseX - currentlyGrabbed.x;
+      // grabbedY = mouseY - currentlyGrabbed.y;
+
+      // originalGrabbedX = currentlyGrabbed.x;
+      // originalGrabbedY = currentlyGrabbed.y;
+
       piecesToDraw.splice(i,1);
-      piecesToDraw.push(currentlyGrabbed);
+      piecesToDraw = piecesToDraw.filter(piece => !currentlyGrabbed.neighbors.includes(piece.id))
+      piecesToDraw.push(currentlyGrabbed,...(currentlyGrabbed.neighbors.map(e => pieceMap[e])));
+      // return;
+      origMouseX = mouseX;
+      origMouseY = mouseY;
+      currentlyGrabbed.grabbed = true;
+      currentlyGrabbed.originalGrabbedX = currentlyGrabbed.x;
+      currentlyGrabbed.originalGrabbedY = currentlyGrabbed.y;
+      for(o of currentlyGrabbed.neighbors){
+        pieceMap[o].grabbed = true;
+        pieceMap[o].originalGrabbedX = pieceMap[o].x;
+        pieceMap[o].originalGrabbedY = pieceMap[o].y
+      }
       return;
     }
   }
 }
 
 function mouseDragged(){
-  if(currentlyGrabbed!=null && currentlyGrabbed.neighbors.length!=0){
-    for(o of currentlyGrabbed.neighbors){
-      pieceMap[o].neighbors = pieceMap[o].neighbors.filter(e => e!=currentlyGrabbed.id);
-    }
-    currentlyGrabbed.neighbors = [];
-  }
+  // if(currentlyGrabbed!=null && currentlyGrabbed.neighbors.length!=0){
+  //   for(o of currentlyGrabbed.neighbors){
+  //     pieceMap[o].neighbors = pieceMap[o].neighbors.filter(e => e!=currentlyGrabbed.id);
+  //   }
+  //   currentlyGrabbed.neighbors = [];
+  // }
   if(currentlyGrabbed!=null){
-    currentlyGrabbed.x = mouseX - grabbedX;
-    currentlyGrabbed.y = mouseY - grabbedY;
+    let dispX = mouseX - origMouseX;
+    let dispY = mouseY - origMouseY;
+    for(piece of piecesToDraw){
+      if(!piece.grabbed) continue;
+      piece.x = piece.originalGrabbedX + dispX;
+      piece.y = piece.originalGrabbedY + dispY;
+      // console.log(piece.x , piece.y)
+    }
+    // currentlyGrabbed.x = mouseX - grabbedX;
+    // currentlyGrabbed.y = mouseY - grabbedY;
+    // for(o of currentlyGrabbed.neighbors){
+    //   let piece = piecesToDraw.filter(e => e.id === o)[0];
+    //   piece.x = (currentlyGrabbed.x - originalGrabbedX);
+    //   piece.y = (currentlyGrabbed.y - originalGrabbedY);
+    // }
     redraw();
   }
 }
+
+
 function mouseReleased(){
-  if(currentlyGrabbed===null) return;
-  console.log(currentlyGrabbed.neighbors)
-  let xy = [currentlyGrabbed.x,currentlyGrabbed.y];
-  let curTopLeft = vecAdd(currentlyGrabbed.data.topLeft,xy);
-  let curTopRight = vecAdd(currentlyGrabbed.data.topRight,xy);
-  let curBotLeft = vecAdd(currentlyGrabbed.data.botLeft,xy);
-  let curBotRight = vecAdd(currentlyGrabbed.data.botRight,xy);
-  let foundfit = false;
-  // top fit
-  let fitSens = 12;
-  if(currentlyGrabbed.row > 0 && !currentlyGrabbed.neighbors.includes(currentlyGrabbed.id - pieceCount[0])){
-    let top = pieceMap[currentlyGrabbed.id - pieceCount[0]];
-    let xyt = [top.x,top.y];
-    let topBotLeft = vecAdd(top.data.botLeft,xyt);
-    let topBotRight = vecAdd(top.data.botRight,xyt)
-    if(pointDist(...curTopLeft,...topBotLeft)<fitSens && pointDist(...curTopRight,...topBotRight)<fitSens){
-      [currentlyGrabbed.x,currentlyGrabbed.y] = vecAdd(topBotLeft,currentlyGrabbed.data.topLeft,-1);
-      currentlyGrabbed.neighbors.push(top.id);
-      top.neighbors.push(currentlyGrabbed.id);
-      foundfit = true;
-    }
-  }
-  // bottom fit
-  if(currentlyGrabbed.row+1 < pieceCount[1] && !currentlyGrabbed.neighbors.includes(currentlyGrabbed.id + pieceCount[0])){
-    let bot = pieceMap[currentlyGrabbed.id + pieceCount[0]];
-    let xyb = [bot.x,bot.y];
-    let botTopLeft = vecAdd(bot.data.topLeft,xyb);
-    let botTopRight = vecAdd(bot.data.topRight,xyb);
-    if(pointDist(...curBotLeft,...botTopLeft)<fitSens && pointDist(...curBotRight,...botTopRight)<fitSens){
-      [currentlyGrabbed.x,currentlyGrabbed.y] = vecAdd(botTopLeft,currentlyGrabbed.data.botLeft,-1);
-      currentlyGrabbed.neighbors.push(bot.id);
-      bot.neighbors.push(currentlyGrabbed.id);
-      foundfit = true;
-    }
-  }
-  // left fit
-  if(currentlyGrabbed.col > 0 && !currentlyGrabbed.neighbors.includes(currentlyGrabbed.id-1)){
-    let left = pieceMap[currentlyGrabbed.id-1];
-    let xyl = [left.x,left.y];
-    let leftTopRight = vecAdd(left.data.topRight,xyl);
-    let leftBotRight = vecAdd(left.data.botRight,xyl);
-    if(pointDist(...curBotLeft,...leftBotRight)<fitSens && pointDist(...curTopLeft,...leftTopRight)<fitSens){
-      [currentlyGrabbed.x,currentlyGrabbed.y] = vecAdd(leftBotRight,currentlyGrabbed.data.botLeft,-1);
-      currentlyGrabbed.neighbors.push(left.id);
-      left.neighbors.push(currentlyGrabbed.id);
-      foundfit = true;
-    }
-  }
-  // right fit
-  if(currentlyGrabbed.col+1 < pieceCount[0] && !currentlyGrabbed.neighbors.includes(currentlyGrabbed.id+1)){
-    let right = pieceMap[currentlyGrabbed.id+1];
-    let xyr = [right.x,right.y];
-    let rightBotLeft = vecAdd(right.data.botLeft,xyr);
-    let rightTopLeft = vecAdd(right.data.topLeft,xyr);
-    if(pointDist(...curBotRight,...rightBotLeft)<fitSens && pointDist(...curTopRight,...rightTopLeft)<fitSens){
-      [currentlyGrabbed.x,currentlyGrabbed.y] = vecAdd(rightTopLeft,currentlyGrabbed.data.topRight,-1);
-      currentlyGrabbed.neighbors.push(right.id);
-      right.neighbors.push(currentlyGrabbed.id);
-      foundfit = true;
-    }
-  }
-  if(foundfit){
-    redraw();
-    let cnt = countConnected(currentlyGrabbed.id);
-    resetVisited(pieceCount[0]*pieceCount[1]);
-    // console.log(cnt);
-    if(cnt == pieceCount[0]*pieceCount[1]){
-      // for(piece of piecesToDraw){
-      //   piece.skin = piece.skinNoBorder;
+  if(currentlyGrabbed === null) return;
+
+  // for every grabbed piece
+  console.log(currentlyGrabbed.neighbors);
+  for(piece of piecesToDraw){
+    if(!piece.grabbed) continue;
+    // if the piece is grabbed, check whether it is near enough to snap to one of its fits
+    if(fit(piece)){
+      console.log("fit: ",piece.id)
+        redraw();
+        let cnt = countConnected(currentlyGrabbed.id);
+        resetVisited(pieceCount[0]*pieceCount[1]);
+        if(cnt == pieceCount[0]*pieceCount[1]){
+          alert("congragulations on solving the puzzle");
+        }
+      
+      // currentlyGrabbed.grabbed = false;
+      // for(o of currentlyGrabbed.neighbors){
+      //   pieceMap[o].grabbed = false;
+      //   pieceMap[o].originalGrabbedX = null;
+      //   pieceMap[o].originalGrabbedY = null;
       // }
-      alert("congragulations on solving the puzzle");
+      break;
     }
+  }
+  for(piece of piecesToDraw){
+    if(!piece.grabbed) continue;
+    piece.grabbed = false;
+    piece.originalGrabbedX = null;
+    piece.originalGrabbedY = null;
   }
   currentlyGrabbed = null;
   grabbedX = null;
   grabbedY = null;
 }
+
+
+function combineGroups(piece1,piece2){
+  let group1 = piece1.neighbors.slice();
+  group1.push(piece1.id);
+  let group2 = piece2.neighbors.slice();
+  group2.push(piece2.id);
+  // console.log(group1);
+  // console.log(group2);
+  // piece1.neighbors.push(group2);
+  for(o of piece1.neighbors){
+    pieceMap[o].neighbors.push(...group2);
+  }
+  piece1.neighbors.push(...group2);
+  // piece2.neighbors.push(group1);
+  for(o of piece2.neighbors){
+    pieceMap[o].neighbors.push(...group1);
+  }
+  piece2.neighbors.push(...group1);
+  // console.log(piece1.neighbors);
+  // console.log(piece2.neighbors);
+}
+
+// check if piece has is close enough to snap to a fit. If there is a fit, snap the piece and its neighbors, and return true.
+// Otherswise return false
+function fit(piece){
+  let xy = [piece.x,piece.y];
+  let curTopLeft = vecAdd(piece.data.topLeft,xy);
+  let curTopRight = vecAdd(piece.data.topRight,xy);
+  let curBotLeft = vecAdd(piece.data.botLeft,xy);
+  let curBotRight = vecAdd(piece.data.botRight,xy);
+  // let foundfit = false;
+  let x_init = piece.x;
+  let y_init = piece.y;
+  // let orig_neighbors = piece.neighbors.slice();
+  // console.log(orig_neighbors);
+  // top fit
+  let fitSens = 12;
+  if(piece.row > 0 && !piece.neighbors.includes(piece.id - pieceCount[0])){
+    let top = pieceMap[piece.id - pieceCount[0]];
+    let xyt = [top.x,top.y];
+    let topBotLeft = vecAdd(top.data.botLeft,xyt);
+    let topBotRight = vecAdd(top.data.botRight,xyt)
+    if(pointDist(...curTopLeft,...topBotLeft)<fitSens && pointDist(...curTopRight,...topBotRight)<fitSens){
+      console.log("top fit");
+      [piece.x,piece.y] = vecAdd(topBotLeft,piece.data.topLeft,-1);
+      for(o of piece.neighbors){
+        followPosition(pieceMap[o],x_init,y_init,piece.x,piece.y);
+      }
+      combineGroups(piece,top);
+      
+      // for(o of piece.neighbors){
+      //   pieceMap[o].neighbors.push(top.id,...top.neighbors);
+      // }
+      // piece.neighbors.push(top.id,...top.neighbors);
+      // top.neighbors.push(piece.id,...orig_neighbors);
+      // // top.neighbors.push(piece.id,...orig_neighbors);
+      // foundfit = true;
+      return true;
+    }
+  }
+  // bottom fit
+  if(piece.row+1 < pieceCount[1] && !piece.neighbors.includes(piece.id + pieceCount[0])){
+    let bot = pieceMap[piece.id + pieceCount[0]];
+    let xyb = [bot.x,bot.y];
+    let botTopLeft = vecAdd(bot.data.topLeft,xyb);
+    let botTopRight = vecAdd(bot.data.topRight,xyb);
+    if(pointDist(...curBotLeft,...botTopLeft)<fitSens && pointDist(...curBotRight,...botTopRight)<fitSens){
+      console.log("bot fit");
+      console.log(piece.id,bot.id);
+      [piece.x,piece.y] = vecAdd(botTopLeft,piece.data.botLeft,-1);
+      for(o of piece.neighbors){
+        followPosition(pieceMap[o],x_init,y_init,piece.x,piece.y);
+      }
+      combineGroups(piece,bot);
+      // for(o of piece.neighbors){
+      //   pieceMap[o].neighbors.push(bot.id,...bot.neighbors);
+      // }
+      // piece.neighbors.push(bot.id,...bot.neighbors);
+      // bot.neighbors.push(piece.id,...orig_neighbors);
+      // foundfit = true;
+      return true;
+    }
+  }
+  // left fit
+  if(piece.col > 0 && !piece.neighbors.includes(piece.id-1)){
+    let left = pieceMap[piece.id-1];
+    let xyl = [left.x,left.y];
+    let leftTopRight = vecAdd(left.data.topRight,xyl);
+    let leftBotRight = vecAdd(left.data.botRight,xyl);
+    if(pointDist(...curBotLeft,...leftBotRight)<fitSens && pointDist(...curTopLeft,...leftTopRight)<fitSens){
+      console.log("left fit");
+      [piece.x,piece.y] = vecAdd(leftBotRight,piece.data.botLeft,-1);
+      for(o of piece.neighbors){
+        followPosition(pieceMap[o],x_init,y_init,piece.x,piece.y);
+      }
+      combineGroups(piece,left);
+      // for(o of piece.neighbors){
+      //   pieceMap[o].neighbors.push(left.id,...left.neighbors);
+      // }
+      // piece.neighbors.push(left.id,...left.neighbors);
+      // left.neighbors.push(piece.id,...orig_neighbors);
+      // foundfit = true;
+      return true;
+    }
+  }
+  // right fit
+  if(piece.col+1 < pieceCount[0] && !piece.neighbors.includes(piece.id+1)){
+    let right = pieceMap[piece.id+1];
+    let xyr = [right.x,right.y];
+    let rightBotLeft = vecAdd(right.data.botLeft,xyr);
+    let rightTopLeft = vecAdd(right.data.topLeft,xyr);
+    if(pointDist(...curBotRight,...rightBotLeft)<fitSens && pointDist(...curTopRight,...rightTopLeft)<fitSens){
+      console.log("right fit");
+      [piece.x,piece.y] = vecAdd(rightTopLeft,piece.data.topRight,-1);
+      for(o of piece.neighbors){
+        followPosition(pieceMap[o],x_init,y_init,piece.x,piece.y);
+      }
+      combineGroups(piece,right);
+      // for(o of piece.neighbors){
+      //   pieceMap[o].neighbors.push(right.id,...right.neighbors);
+      // }
+      // piece.neighbors.push(right.id,...right.neighbors);
+      // right.neighbors.push(piece.id,...orig_neighbors);
+      // foundfit = true;
+      return true;
+    }
+  }
+  return false;
+}
+
+// function mouseReleased(){
+//   if(currentlyGrabbed===null) return;
+//   console.log(currentlyGrabbed.neighbors)
+//   let xy = [currentlyGrabbed.x,currentlyGrabbed.y];
+//   let curTopLeft = vecAdd(currentlyGrabbed.data.topLeft,xy);
+//   let curTopRight = vecAdd(currentlyGrabbed.data.topRight,xy);
+//   let curBotLeft = vecAdd(currentlyGrabbed.data.botLeft,xy);
+//   let curBotRight = vecAdd(currentlyGrabbed.data.botRight,xy);
+//   let foundfit = false;
+//   let x_init = currentlyGrabbed.x;
+//   let y_init = currentlyGrabbed.y;
+//   let orig_neighbors = currentlyGrabbed.neighbors.slice();
+//   // console.log(orig_neighbors);
+//   // top fit
+//   let fitSens = 12;
+//   if(currentlyGrabbed.row > 0 && !currentlyGrabbed.neighbors.includes(currentlyGrabbed.id - pieceCount[0])){
+//     let top = pieceMap[currentlyGrabbed.id - pieceCount[0]];
+//     let xyt = [top.x,top.y];
+//     let topBotLeft = vecAdd(top.data.botLeft,xyt);
+//     let topBotRight = vecAdd(top.data.botRight,xyt)
+//     if(pointDist(...curTopLeft,...topBotLeft)<fitSens && pointDist(...curTopRight,...topBotRight)<fitSens){
+//       [currentlyGrabbed.x,currentlyGrabbed.y] = vecAdd(topBotLeft,currentlyGrabbed.data.topLeft,-1);
+//       for(o of currentlyGrabbed.neighbors){
+//         followPosition(pieceMap[o],x_init,y_init,currentlyGrabbed.x,currentlyGrabbed.y);
+//       }
+//       for(o of currentlyGrabbed.neighbors){
+//         pieceMap[o].neighbors.push(top.id,...top.neighbors);
+//       }
+//       currentlyGrabbed.neighbors.push(top.id,...top.neighbors);
+//       top.neighbors.push(currentlyGrabbed.id,...orig_neighbors);
+//       // top.neighbors.push(currentlyGrabbed.id,...orig_neighbors);
+//       foundfit = true;
+//     }
+//   }
+//   // bottom fit
+//   if(currentlyGrabbed.row+1 < pieceCount[1] && !currentlyGrabbed.neighbors.includes(currentlyGrabbed.id + pieceCount[0])){
+//     let bot = pieceMap[currentlyGrabbed.id + pieceCount[0]];
+//     let xyb = [bot.x,bot.y];
+//     let botTopLeft = vecAdd(bot.data.topLeft,xyb);
+//     let botTopRight = vecAdd(bot.data.topRight,xyb);
+//     if(pointDist(...curBotLeft,...botTopLeft)<fitSens && pointDist(...curBotRight,...botTopRight)<fitSens){
+//       [currentlyGrabbed.x,currentlyGrabbed.y] = vecAdd(botTopLeft,currentlyGrabbed.data.botLeft,-1);
+//       for(o of currentlyGrabbed.neighbors){
+//         followPosition(pieceMap[o],x_init,y_init,currentlyGrabbed.x,currentlyGrabbed.y);
+//       }
+//       for(o of currentlyGrabbed.neighbors){
+//         pieceMap[o].neighbors.push(bot.id,...bot.neighbors);
+//       }
+//       currentlyGrabbed.neighbors.push(bot.id,...bot.neighbors);
+//       bot.neighbors.push(currentlyGrabbed.id,...orig_neighbors);
+//       foundfit = true;
+//     }
+//   }
+//   // left fit
+//   if(currentlyGrabbed.col > 0 && !currentlyGrabbed.neighbors.includes(currentlyGrabbed.id-1)){
+//     let left = pieceMap[currentlyGrabbed.id-1];
+//     let xyl = [left.x,left.y];
+//     let leftTopRight = vecAdd(left.data.topRight,xyl);
+//     let leftBotRight = vecAdd(left.data.botRight,xyl);
+//     if(pointDist(...curBotLeft,...leftBotRight)<fitSens && pointDist(...curTopLeft,...leftTopRight)<fitSens){
+//       [currentlyGrabbed.x,currentlyGrabbed.y] = vecAdd(leftBotRight,currentlyGrabbed.data.botLeft,-1);
+//       for(o of currentlyGrabbed.neighbors){
+//         followPosition(pieceMap[o],x_init,y_init,currentlyGrabbed.x,currentlyGrabbed.y);
+//       }
+//       for(o of currentlyGrabbed.neighbors){
+//         pieceMap[o].neighbors.push(left.id,...left.neighbors);
+//       }
+//       currentlyGrabbed.neighbors.push(left.id,...left.neighbors);
+//       left.neighbors.push(currentlyGrabbed.id,...orig_neighbors);
+//       foundfit = true;
+//     }
+//   }
+//   // right fit
+//   if(currentlyGrabbed.col+1 < pieceCount[0] && !currentlyGrabbed.neighbors.includes(currentlyGrabbed.id+1)){
+//     let right = pieceMap[currentlyGrabbed.id+1];
+//     let xyr = [right.x,right.y];
+//     let rightBotLeft = vecAdd(right.data.botLeft,xyr);
+//     let rightTopLeft = vecAdd(right.data.topLeft,xyr);
+//     if(pointDist(...curBotRight,...rightBotLeft)<fitSens && pointDist(...curTopRight,...rightTopLeft)<fitSens){
+//       [currentlyGrabbed.x,currentlyGrabbed.y] = vecAdd(rightTopLeft,currentlyGrabbed.data.topRight,-1);
+//       for(o of currentlyGrabbed.neighbors){
+//         followPosition(pieceMap[o],x_init,y_init,currentlyGrabbed.x,currentlyGrabbed.y);
+//       }
+//       for(o of currentlyGrabbed.neighbors){
+//         pieceMap[o].neighbors.push(right.id,...right.neighbors);
+//       }
+//       currentlyGrabbed.neighbors.push(right.id,...right.neighbors);
+//       right.neighbors.push(currentlyGrabbed.id,...orig_neighbors);
+//       foundfit = true;
+//     }
+//   }
+//   if(foundfit){
+    
+//     redraw();
+//     let cnt = countConnected(currentlyGrabbed.id);
+//     resetVisited(pieceCount[0]*pieceCount[1]);
+//     // console.log(cnt);
+//     if(cnt == pieceCount[0]*pieceCount[1]){
+//       // for(piece of piecesToDraw){
+//       //   piece.skin = piece.skinNoBorder;
+//       // }
+//       alert("congragulations on solving the puzzle");
+//     }
+//   }
+//   currentlyGrabbed.grabbed = false;
+//   for(o of currentlyGrabbed.neighbors){
+//     pieceMap[o].grabbed = false;
+//     pieceMap[o].originalGrabbedX = null;
+//     pieceMap[o].originalGrabbedY = null;
+//   }
+//   currentlyGrabbed = null;
+//   grabbedX = null;
+//   grabbedY = null;
+// }
