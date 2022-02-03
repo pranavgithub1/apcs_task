@@ -52,7 +52,7 @@ function getLine(x1,y1,x2,y2,r){
       Math.pow(y2-y1,2) + Math.pow(x2-x1,2)
     );
   }
-  function rotatePiece(piece,origin){
+  function rotatePiece(piece,originPiece=piece){
   
     let rdim = Math.max(piece.skin.height,piece.skin.width);
     let rotater = createGraphics(rdim*2,rdim*2);
@@ -77,6 +77,13 @@ function getLine(x1,y1,x2,y2,r){
     piece.data.botRight = rotate90ccw(piece.data.botRight,piece.data.cellCenter);
     piece.skin = newskin;
 
+    let originOfRotation = [originPiece.x + originPiece.data.cellCenter[0],originPiece.y + originPiece.data.cellCenter[1]];
+    let pieceCenter = [piece.x + piece.data.cellCenter[0],piece.y + piece.data.cellCenter[1]];
+    let rotatedCenter = rotate90ccw(pieceCenter,originOfRotation);
+    [piece.x,piece.y] = [rotatedCenter[0] - piece.data.cellCenter[0],rotatedCenter[1] - piece.data.cellCenter[1]];
+    origMouseX = mouseX;
+    origMouseY = mouseY;
+    [piece.originalGrabbedX,piece.originalGrabbedY] = [piece.x,piece.y];
     // [piece.x,piece.y] = rotate90ccw([piece.x,piece.y],origin);
     redraw();
   }

@@ -177,10 +177,11 @@ function draw() {
 }
 function keyPressed(){
   if(key === 'a' && currentlyGrabbed!=null){
-    let origin = [currentlyGrabbed.x,currentlyGrabbed.y]
-    rotatePiece(currentlyGrabbed,origin);
+    // let origin = [currentlyGrabbed.x,currentlyGrabbed.y]
+    let originPiece = currentlyGrabbed;
+    rotatePiece(currentlyGrabbed,originPiece);
     for(o of currentlyGrabbed.neighbors){
-      rotatePiece(pieceMap[o],origin);
+      rotatePiece(pieceMap[o],originPiece);
     }
   }
   if(key === ' '){
