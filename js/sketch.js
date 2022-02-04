@@ -169,7 +169,7 @@ function draw() {
     pop();
     return;
   }
-  noLoop();
+  // noLoop();
   background(255);
   for(piece of piecesToDraw){
     image(piece.skin,piece.x,piece.y);
@@ -241,20 +241,18 @@ function mouseDragged(){
   if(currentlyGrabbed!=null){
     let dispX = mouseX - origMouseX;
     let dispY = mouseY - origMouseY;
-    for(piece of piecesToDraw){
-      if(!piece.grabbed) continue;
-      piece.x = piece.originalGrabbedX + dispX;
-      piece.y = piece.originalGrabbedY + dispY;
-      // console.log(piece.x , piece.y)
+    currentlyGrabbed.x = currentlyGrabbed.originalGrabbedX + dispX;
+    currentlyGrabbed.y = currentlyGrabbed.originalGrabbedY + dispY;
+    for(o of currentlyGrabbed.neighbors){
+      pieceMap[o].x = pieceMap[o].originalGrabbedX + dispX;
+      pieceMap[o].y = pieceMap[o].originalGrabbedY + dispY;
     }
-    // currentlyGrabbed.x = mouseX - grabbedX;
-    // currentlyGrabbed.y = mouseY - grabbedY;
-    // for(o of currentlyGrabbed.neighbors){
-    //   let piece = piecesToDraw.filter(e => e.id === o)[0];
-    //   piece.x = (currentlyGrabbed.x - originalGrabbedX);
-    //   piece.y = (currentlyGrabbed.y - originalGrabbedY);
+    // for(piece of piecesToDraw){
+    //   if(!piece.grabbed) continue;
+    //   piece.x = piece.originalGrabbedX + dispX;
+    //   piece.y = piece.originalGrabbedY + dispY;
     // }
-    redraw();
+    // redraw();
   }
 }
 
@@ -269,7 +267,7 @@ function mouseReleased(){
     // if the piece is grabbed, check whether it is near enough to snap to one of its fits
     if(fit(piece)){
       console.log("fit: ",piece.id)
-        redraw();
+        // redraw();
         let cnt = countConnected(currentlyGrabbed.id);
         resetVisited(pieceCount[0]*pieceCount[1]);
         if(cnt == pieceCount[0]*pieceCount[1]){

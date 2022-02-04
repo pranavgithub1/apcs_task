@@ -4,7 +4,7 @@ let endpoint = "https://api.artic.edu/api/v1/artworks";
 let img;
 let pieces = [];
 let imageLoaded = false;
-let loadRandom = true;
+let loadRandom = false;
 let pieceGen = false;
 let pieceCount = [10,0];
 let xDims;

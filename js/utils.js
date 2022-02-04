@@ -85,7 +85,7 @@ function getLine(x1,y1,x2,y2,r){
     origMouseY = mouseY;
     [piece.originalGrabbedX,piece.originalGrabbedY] = [piece.x,piece.y];
     // [piece.x,piece.y] = rotate90ccw([piece.x,piece.y],origin);
-    redraw();
+    // redraw();
   }
   function rotate90ccw(point,origin){
     let xDist = point[0] - origin[0];
