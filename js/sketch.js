@@ -35,6 +35,9 @@ function preload() {
 function setup() {
   createCanvas(document.documentElement.clientWidth*0.9, document.documentElement.clientHeight*0.9);
   background(255);
+  pixelDensity(1);
+  // density = pixelDensity();
+  console.log(density);
   // console.log(window)
 }
 
@@ -97,9 +100,11 @@ function draw() {
         let pieceRow = i;
         let topLeftX = prefxDims[pieceCol];
         let topLeftY = prefyDims[pieceRow];
-        let pieceGraphics = createGraphics(maxDim*pieceCount[0],maxDim*pieceCount[1]);
+        // let pieceGraphics = createGraphics(maxDim*pieceCount[0],maxDim*pieceCount[1]);
+        let pieceGraphics = createGraphics(maxDim,maxDim);
+        // pieceGraphics.pixelDensity(density);
         pieceGraphics.clear();
-        let center = [maxDim*pieceCol + maxDim/2,maxDim*pieceRow + maxDim/2];
+        let center = [maxDim/2,maxDim/2];
         let pieceCenter = [topLeftX + pieces[i][j].data.width/2,topLeftY + pieces[i][j].data.height/2];
         pieceGraphics.image(pieces[i][j].skin,center[0]-pieceCenter[0],center[1]-pieceCenter[1]);
         let shift = [(center[0]-pieceCenter[0]),(center[1]-pieceCenter[1])];
@@ -111,7 +116,7 @@ function draw() {
         lightData.cellCenter = center;
         lightData.pieceCenter = pieceCenter;
         
-        let p = new lightPiece(pieceGraphics.get(),pieces[i][j].skinNoBorder,0,-50,pieces[i][j].row,pieces[i][j].col,pieces[i][j].id,lightData);
+        let p = new lightPiece(pieceGraphics.get(),pieces[i][j].skinNoBorder,topLeftX,topLeftY,pieces[i][j].row,pieces[i][j].col,pieces[i][j].id,lightData);
         // console.log(pos);
         if(loadRandom){
           let pos = getRandomPosition(0,width-maxDim,0,height-maxDim);
@@ -173,6 +178,8 @@ function draw() {
   background(255);
   for(piece of piecesToDraw){
     image(piece.skin,piece.x,piece.y);
+    noFill();
+    rect(piece.x,piece.y,piece.skin.width,piece.skin.height);
   }
 }
 function keyPressed(){

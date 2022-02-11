@@ -18,6 +18,7 @@ function generatePiece(pieceRow,pieceCol,pieceId) {
     let pieceData = res[1];
     tempImage.mask(pieceMask);
     let pieceWithBorder = createGraphics(img.width,img.height);
+    pieceWithBorder.pixelDensity(density);
     pieceWithBorder.clear();
     pieceWithBorder.image(tempImage,0,0);
     pieceWithBorder.noFill();
@@ -39,6 +40,7 @@ function generatePiece(pieceRow,pieceCol,pieceId) {
     // let pieceX = prefxDims[pieceCol];
     // let pieceY = prefyDims[pieceRow];
     let pieceMask = createGraphics(img.width,img.height);
+    pieceMask.pixelDensity(density);
     pieceMask.clear();
     // pieceMask.background('rgba(0, 0, 0, 0');
     pieceMask.fill('rgba(0, 0, 0, 1)');

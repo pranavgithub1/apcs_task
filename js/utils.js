@@ -56,19 +56,24 @@ function getLine(x1,y1,x2,y2,r){
   
     let rdim = Math.max(piece.skin.height,piece.skin.width);
     let rotater = createGraphics(rdim*2,rdim*2);
+    // rotater.pixelDensity(density);
     rotater.clear();
     rotater.translate(rotater.width/2,rotater.height/2);
     rotater.rotate(Math.PI/2);
     rotater.image(piece.skin,0,0);
     let rotated = rotater.get();
+    // let rotated = createImage(rotater.width * density,rotater.height * density);
+    // rotated.copy(rotater,0,0,rotater.width,rotater.height,0,0,rotater.width*density,rotater.height*density);
     rotater.remove();
     rotater=null;
   
     let newSkin = createGraphics(piece.skin.width,piece.skin.height);
+    // newSkin.pixelDensity(density);
     newSkin.clear();
     newSkin.imageMode(CENTER);
     newSkin.image(rotated,piece.data.cellCenter[0]+piece.data.cellCenter[1],piece.data.cellCenter[1]-piece.data.cellCenter[0]);
     let newskin = newSkin.get();
+    // let newskin = 
     newSkin.remove();
     newSkin=null;
     piece.data.topLeft = rotate90ccw(piece.data.topLeft,piece.data.cellCenter);
