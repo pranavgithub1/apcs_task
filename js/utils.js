@@ -158,3 +158,132 @@ function getLine(x1,y1,x2,y2,r){
     tile.x += x_final - x_init;
     tile.y += y_final - y_init;
   }
+
+  function combineGroups(piece1,piece2){
+    let group1 = piece1.neighbors.slice();
+    group1.push(piece1.id);
+    let group2 = piece2.neighbors.slice();
+    group2.push(piece2.id);
+    // console.log(group1);
+    // console.log(group2);
+    // piece1.neighbors.push(group2);
+    for(o of piece1.neighbors){
+      pieceMap[o].neighbors.push(...group2);
+    }
+    piece1.neighbors.push(...group2);
+    // piece2.neighbors.push(group1);
+    for(o of piece2.neighbors){
+      pieceMap[o].neighbors.push(...group1);
+    }
+    piece2.neighbors.push(...group1);
+    // console.log(piece1.neighbors);
+    // console.log(piece2.neighbors);
+  }
+  
+  // check if piece has is close enough to snap to a fit. If there is a fit, snap the piece and its neighbors, and return true.
+  // Otherswise return false
+  function fit(piece){
+    let xy = [piece.x,piece.y];
+    let curTopLeft = vecAdd(piece.data.topLeft,xy);
+    let curTopRight = vecAdd(piece.data.topRight,xy);
+    let curBotLeft = vecAdd(piece.data.botLeft,xy);
+    let curBotRight = vecAdd(piece.data.botRight,xy);
+    // let foundfit = false;
+    let x_init = piece.x;
+    let y_init = piece.y;
+    // let orig_neighbors = piece.neighbors.slice();
+    // console.log(orig_neighbors);
+    // top fit
+    let fitSens = 12;
+    if(piece.row > 0 && !piece.neighbors.includes(piece.id - pieceCount[0])){
+      let top = pieceMap[piece.id - pieceCount[0]];
+      let xyt = [top.x,top.y];
+      let topBotLeft = vecAdd(top.data.botLeft,xyt);
+      let topBotRight = vecAdd(top.data.botRight,xyt)
+      if(pointDist(...curTopLeft,...topBotLeft)<fitSens && pointDist(...curTopRight,...topBotRight)<fitSens){
+        console.log("top fit");
+        [piece.x,piece.y] = vecAdd(topBotLeft,piece.data.topLeft,-1);
+        for(o of piece.neighbors){
+          followPosition(pieceMap[o],x_init,y_init,piece.x,piece.y);
+        }
+        combineGroups(piece,top);
+        
+        // for(o of piece.neighbors){
+        //   pieceMap[o].neighbors.push(top.id,...top.neighbors);
+        // }
+        // piece.neighbors.push(top.id,...top.neighbors);
+        // top.neighbors.push(piece.id,...orig_neighbors);
+        // // top.neighbors.push(piece.id,...orig_neighbors);
+        // foundfit = true;
+        return true;
+      }
+    }
+    // bottom fit
+    if(piece.row+1 < pieceCount[1] && !piece.neighbors.includes(piece.id + pieceCount[0])){
+      let bot = pieceMap[piece.id + pieceCount[0]];
+      let xyb = [bot.x,bot.y];
+      let botTopLeft = vecAdd(bot.data.topLeft,xyb);
+      let botTopRight = vecAdd(bot.data.topRight,xyb);
+      if(pointDist(...curBotLeft,...botTopLeft)<fitSens && pointDist(...curBotRight,...botTopRight)<fitSens){
+        console.log("bot fit");
+        console.log(piece.id,bot.id);
+        [piece.x,piece.y] = vecAdd(botTopLeft,piece.data.botLeft,-1);
+        for(o of piece.neighbors){
+          followPosition(pieceMap[o],x_init,y_init,piece.x,piece.y);
+        }
+        combineGroups(piece,bot);
+        // for(o of piece.neighbors){
+        //   pieceMap[o].neighbors.push(bot.id,...bot.neighbors);
+        // }
+        // piece.neighbors.push(bot.id,...bot.neighbors);
+        // bot.neighbors.push(piece.id,...orig_neighbors);
+        // foundfit = true;
+        return true;
+      }
+    }
+    // left fit
+    if(piece.col > 0 && !piece.neighbors.includes(piece.id-1)){
+      let left = pieceMap[piece.id-1];
+      let xyl = [left.x,left.y];
+      let leftTopRight = vecAdd(left.data.topRight,xyl);
+      let leftBotRight = vecAdd(left.data.botRight,xyl);
+      if(pointDist(...curBotLeft,...leftBotRight)<fitSens && pointDist(...curTopLeft,...leftTopRight)<fitSens){
+        console.log("left fit");
+        [piece.x,piece.y] = vecAdd(leftBotRight,piece.data.botLeft,-1);
+        for(o of piece.neighbors){
+          followPosition(pieceMap[o],x_init,y_init,piece.x,piece.y);
+        }
+        combineGroups(piece,left);
+        // for(o of piece.neighbors){
+        //   pieceMap[o].neighbors.push(left.id,...left.neighbors);
+        // }
+        // piece.neighbors.push(left.id,...left.neighbors);
+        // left.neighbors.push(piece.id,...orig_neighbors);
+        // foundfit = true;
+        return true;
+      }
+    }
+    // right fit
+    if(piece.col+1 < pieceCount[0] && !piece.neighbors.includes(piece.id+1)){
+      let right = pieceMap[piece.id+1];
+      let xyr = [right.x,right.y];
+      let rightBotLeft = vecAdd(right.data.botLeft,xyr);
+      let rightTopLeft = vecAdd(right.data.topLeft,xyr);
+      if(pointDist(...curBotRight,...rightBotLeft)<fitSens && pointDist(...curTopRight,...rightTopLeft)<fitSens){
+        console.log("right fit");
+        [piece.x,piece.y] = vecAdd(rightTopLeft,piece.data.topRight,-1);
+        for(o of piece.neighbors){
+          followPosition(pieceMap[o],x_init,y_init,piece.x,piece.y);
+        }
+        combineGroups(piece,right);
+        // for(o of piece.neighbors){
+        //   pieceMap[o].neighbors.push(right.id,...right.neighbors);
+        // }
+        // piece.neighbors.push(right.id,...right.neighbors);
+        // right.neighbors.push(piece.id,...orig_neighbors);
+        // foundfit = true;
+        return true;
+      }
+    }
+    return false;
+  }
