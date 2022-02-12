@@ -27,8 +27,24 @@ function loadPuzzle() {
     document.querySelector('#startButton').disabled=false;
     let puzzleImage = document.querySelector('#puzzleImg')
     puzzleImage.src = imgUrl;
-    puzzleImage.height = innerHeight * 0.8;
-    puzzleImage.style.display = 'block';
+    puzzleImage.height = innerHeight * 0.7;
+    document.querySelector('.puzzleSummary').style.display = 'block';
+    
+    let artTitle = "Unknown title";
+    let artist = "Unkown artist";
+    let artDate = "unknown date"
+    if(artData.title != null) artTitle = artData.title;
+    if(artData.artist_title != null) artist = artData.artist_title;
+    if(artData.date_start != null) {
+      artDate = artData.date_start;
+      if(artDate<0){
+        artDate = -artDate;
+        artDate  = `${artDate} BC`;
+      }
+    }
+
+    document.querySelector('.puzzleTitle').innerHTML = artTitle;
+    document.querySelector('.puzzleArtist').innerHTML = `${artist} - ${artDate}`;
   }).catch(err => {
     console.log(err);
     alert("There was an error fetching the image. Please reload.")

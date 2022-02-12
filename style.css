@@ -11,8 +11,16 @@ body {
   margin-top: 10px;
   border: 1px solid white;
   padding: 10px;
-  display: none;
+  /* display: none; */
 }
 #topbar {
   color: white;
+}
+.puzzleSummary {
+  display: none;
+}
+
+.puzzleDescription {
+  color: white;
+  margin-top: 10px;
 }

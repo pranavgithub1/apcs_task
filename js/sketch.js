@@ -6,26 +6,6 @@ let sketch = function(p) {
         img = i;
         imageLoaded=true;
       });
-      // let randomPage = int(random(0,400));
-      // let url = endpoint+`?page=${randomPage}`;
-      // p.httpGet(url,'json',false,function(response){
-      //   console.log(response);
-      //   data = response;
-      //   let randomIndex = int(random(0,12));
-      //   let image_id = data.data[randomIndex].image_id;
-      //   artData = data.data[randomIndex];
-      //   console.log(image_id);
-      //   if(image_id===null) {
-      //     imageLoaded = true;
-      //     return;
-      //   }
-      //   let imageURL = `https://www.artic.edu/iiif/2/${image_id}/full/843,/0/default.jpg`;
-      //   console.log(imageURL);
-      //   p.loadImage(imageURL,function(i){
-      //     img = i;
-      //     imageLoaded = true;
-      //   });
-      // });
     }
     else {
       let defaultImg = "https://www.artic.edu/iiif/2/4a87e43e-8777-d36f-126d-545286eb9c4f/full/843,/0/default.jpg";
@@ -33,8 +13,6 @@ let sketch = function(p) {
         img = i;
         imageLoaded=true;
       });
-      // img = loadImage('https://www.artic.edu/iiif/2/4a87e43e-8777-d36f-126d-545286eb9c4f/full/843,/0/default.jpg');
-      // imageLoaded = true;
     }  
   }
   
