@@ -9,6 +9,7 @@ async function getImageURL() {
   let randomPage = Math.floor(Math.random()*400);
   let url = endpoint+`?page=${randomPage}`;
   let response = await fetch(url);
+  if(!response) alert("There was a problem fetching the image please reload");
   data = await response.json();
   console.log(randomPage);
   console.log(data);

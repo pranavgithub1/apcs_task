@@ -181,7 +181,7 @@ let sketch = function(p) {
     //   return;
     // }
     // noLoop();
-    p.background(255);
+    p.background(0);
     for(piece of piecesToDraw){
       p.image(piece.skin,piece.x,piece.y);
       // noFill();
