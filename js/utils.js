@@ -52,46 +52,7 @@ function getLine(x1,y1,x2,y2,r){
       Math.pow(y2-y1,2) + Math.pow(x2-x1,2)
     );
   }
-  function rotatePiece(piece,originPiece=piece){
   
-    let rdim = Math.max(piece.skin.height,piece.skin.width);
-    let rotater = createGraphics(rdim*2,rdim*2);
-    // rotater.pixelDensity(density);
-    rotater.clear();
-    rotater.translate(rotater.width/2,rotater.height/2);
-    rotater.rotate(Math.PI/2);
-    rotater.image(piece.skin,0,0);
-    let rotated = rotater.get();
-    // let rotated = createImage(rotater.width * density,rotater.height * density);
-    // rotated.copy(rotater,0,0,rotater.width,rotater.height,0,0,rotater.width*density,rotater.height*density);
-    rotater.remove();
-    rotater=null;
-  
-    let newSkin = createGraphics(piece.skin.width,piece.skin.height);
-    // newSkin.pixelDensity(density);
-    newSkin.clear();
-    newSkin.imageMode(CENTER);
-    newSkin.image(rotated,piece.data.cellCenter[0]+piece.data.cellCenter[1],piece.data.cellCenter[1]-piece.data.cellCenter[0]);
-    let newskin = newSkin.get();
-    // let newskin = 
-    newSkin.remove();
-    newSkin=null;
-    piece.data.topLeft = rotate90ccw(piece.data.topLeft,piece.data.cellCenter);
-    piece.data.topRight = rotate90ccw(piece.data.topRight,piece.data.cellCenter);
-    piece.data.botLeft = rotate90ccw(piece.data.botLeft,piece.data.cellCenter);
-    piece.data.botRight = rotate90ccw(piece.data.botRight,piece.data.cellCenter);
-    piece.skin = newskin;
-
-    let originOfRotation = [originPiece.x + originPiece.data.cellCenter[0],originPiece.y + originPiece.data.cellCenter[1]];
-    let pieceCenter = [piece.x + piece.data.cellCenter[0],piece.y + piece.data.cellCenter[1]];
-    let rotatedCenter = rotate90ccw(pieceCenter,originOfRotation);
-    [piece.x,piece.y] = [rotatedCenter[0] - piece.data.cellCenter[0],rotatedCenter[1] - piece.data.cellCenter[1]];
-    origMouseX = mouseX;
-    origMouseY = mouseY;
-    [piece.originalGrabbedX,piece.originalGrabbedY] = [piece.x,piece.y];
-    // [piece.x,piece.y] = rotate90ccw([piece.x,piece.y],origin);
-    // redraw();
-  }
   function rotate90ccw(point,origin){
     let xDist = point[0] - origin[0];
     let yDist = point[1] - origin[1];
