@@ -17,15 +17,23 @@
     <script src="./js/utils.js"></script>
     <!-- <script src="./js/pieceGen.js"></script> -->
     <script src="./js/sketch.js"></script>
-    <script src="./js/fetchData.js"></script>
+    <script src="./js/fetchData.js" defer></script>
     <!-- </div> -->
     <div id="welcomePage">
         <div id="topbar">
             <h1>
                 BrowserPuzzle
             </h1>
-            <button onclick="loadPuzzle()" class="btn btn-dark">Load New</button>
-            <button onclick="initSketch()" disabled="true" id="startButton" class="btn btn-dark">Start Puzzle</button>
+            <div class="d-flex flex-row gap-3">
+                <button onclick="loadPuzzle()" class="btn btn-dark">Load New</button>
+                <button onclick="initSketch()" disabled="true" id="startButton" class="btn btn-dark">Start Puzzle</button>
+                <div class="my-auto">
+                    <input type="range" min="2" max="10" value="5" class="slider" disabled="true" />
+                </div>
+                <div id="pieceCnt">
+
+                </div>
+            </div>
         </div>
         <div class="puzzleSummary">
             <img id="puzzleImg" />

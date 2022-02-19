@@ -26,3 +26,5 @@ let textFadeCounter = 0;
 let fade = 2;
 let density;
 let origMouseX,origMouseY;
+let previewImgWidth,previewImgHeight;
+// let previewLoaded = false;

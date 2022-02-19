@@ -21,13 +21,21 @@ async function getImageURL() {
   return imgURL
 }
 let imageURL;
+let pieceSlider = document.querySelector('.slider');
+let puzzleImage = document.querySelector('#puzzleImg');
+let whRatio;
 function loadPuzzle() {
   getImageURL().then(imgUrl => {
     imageURL = imgUrl;
-    document.querySelector('#startButton').disabled=false;
-    let puzzleImage = document.querySelector('#puzzleImg')
+    
     puzzleImage.src = imgUrl;
     puzzleImage.height = innerHeight * 0.7;
+    puzzleImage.onload = function() {
+      whRatio = puzzleImage.height / puzzleImage.width;
+      console.log(whRatio);
+      pieceSlider.max = Math.floor(Math.sqrt(500/whRatio));
+    }
+
     document.querySelector('.puzzleSummary').style.display = 'block';
     
     let artTitle = "Unknown title";
@@ -45,6 +53,10 @@ function loadPuzzle() {
 
     document.querySelector('.puzzleTitle').innerHTML = artTitle;
     document.querySelector('.puzzleArtist').innerHTML = `${artist} - ${artDate}`;
+
+    pieceSlider.disabled = false;
+    document.querySelector('#startButton').disabled=false;
+
   }).catch(err => {
     console.log(err);
     alert("There was an error fetching the image. Please reload.")
@@ -52,6 +64,13 @@ function loadPuzzle() {
 }
 
 loadPuzzle();
+
+pieceSlider.oninput = function(){
+  if(!whRatio) return;
+  document.querySelector('#pieceCnt').innerHTML = pieceSlider.value * Math.ceil(pieceSlider.value * whRatio);
+  pieceCount = [parseInt(pieceSlider.value,10),0];
+}
+
 
 
 

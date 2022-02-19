@@ -45,6 +45,7 @@ let sketch = function(p) {
       let imgWHratio = img.height / img.width;
       // pieceCount[0] = Math.floor(img.width/100);
       pieceCount[1] = Math.ceil(pieceCount[0] * imgWHratio);
+      console.log(pieceCount);
       // generate the pieces
       pieceId = 0;
       resetVisited(pieceCount[0]*pieceCount[1]);
@@ -196,6 +197,7 @@ let sketch = function(p) {
     for(let i = piecesToDraw.length-1;i>=0;i--){
       let [r,g,b,a] = piecesToDraw[i].skin.get(p.mouseX-piecesToDraw[i].x,p.mouseY-piecesToDraw[i].y);
       if(a!=0) {
+        console.log("grabbed")
         currentlyGrabbed = piecesToDraw[i];
         // grabbedX = mouseX - currentlyGrabbed.x;
         // grabbedY = mouseY - currentlyGrabbed.y;
